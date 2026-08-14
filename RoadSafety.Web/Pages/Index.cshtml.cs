@@ -1,10 +1,10 @@
-using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using RoadSafety.Web.Services;
+using RoadSafety.Web.ViewModels;
 
 namespace RoadSafety.Web.Pages;
 
@@ -15,20 +15,9 @@ public class IndexModel : PageModel
     public IndexModel(AuthService auth) => _auth = auth;
 
     [BindProperty]
-    public InputModel Input { get; set; } = new();
+    public LoginViewModel Input { get; set; } = new();
 
     public string? ErrorMessage { get; set; }
-
-    public class InputModel
-    {
-        [Required(ErrorMessage = "Force number is required")]
-        [Display(Name = "Force Number")]
-        public string ForceNumber { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "Password is required")]
-        [DataType(DataType.Password)]
-        public string Password { get; set; } = string.Empty;
-    }
 
     public IActionResult OnGet()
     {
