@@ -10,6 +10,5 @@ public class User
 
     public string BranchReferenceNumber { get; set; } = string.Empty;
     public Branch? Branch { get; set; }
-
     public DateTime CreatedAt { get; set; }
 }

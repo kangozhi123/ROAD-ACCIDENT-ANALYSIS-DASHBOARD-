@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using RoadSafety.Web.Database;
 using RoadSafety.Web.Models;
+using RoadSafety.Web.Services;
 
 namespace RoadSafety.Tests;
 
@@ -24,6 +26,11 @@ public class AuthServiceTests
         context.Database.EnsureCreated();
         return context;
     }
+
+    private static AuthService CreateService(AppDbContext db) =>
+        new(db, new PasswordHasher<User>());
+
+    // ── Schema ────────────────────────────────────────────────
 
     [Fact]
     public async Task Companies_and_branches_are_seeded_by_the_model()
@@ -103,5 +110,114 @@ public class AuthServiceTests
         });
 
         await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+    }
+
+    // ── Registration ──────────────────────────────────────────
+
+    [Fact]
+    public async Task Registration_stores_the_password_as_a_hash_never_as_plain_text()
+    {
+        using var db = CreateContext();
+        var auth = CreateService(db);
+
+        var result = await auth.RegisterAsync(
+            "Grace Banda", "ZP-01234", "grace.banda@police.gov.zm", "Password123!", "BR-001");
+
+        Assert.Equal(RegistrationResult.Success, result);
+
+        var stored = await db.Users.SingleAsync(u => u.ForceNumber == "ZP-01234");
+        Assert.NotEqual("Password123!", stored.PasswordHash);
+        Assert.NotEmpty(stored.PasswordHash);
+        Assert.Equal("BR-001", stored.BranchReferenceNumber);
+    }
+
+    [Fact]
+    public async Task Registration_rejects_a_duplicate_force_number()
+    {
+        using var db = CreateContext();
+        var auth = CreateService(db);
+
+        await auth.RegisterAsync("First Officer", "ZP-05555", "first@police.gov.zm", "Password123!", "BR-001");
+        var result = await auth.RegisterAsync("Second Officer", "ZP-05555", "second@police.gov.zm", "Password123!", "BR-002");
+
+        Assert.Equal(RegistrationResult.DuplicateForceNumber, result);
+        Assert.Equal(1, await db.Users.CountAsync());
+    }
+
+    [Fact]
+    public async Task Registration_rejects_a_duplicate_email()
+    {
+        using var db = CreateContext();
+        var auth = CreateService(db);
+
+        await auth.RegisterAsync("First Officer", "ZP-06001", "shared@police.gov.zm", "Password123!", "BR-001");
+        var result = await auth.RegisterAsync("Second Officer", "ZP-06002", "shared@police.gov.zm", "Password123!", "BR-002");
+
+        Assert.Equal(RegistrationResult.DuplicateEmail, result);
+    }
+
+    [Fact]
+    public async Task Registration_rejects_an_unknown_branch()
+    {
+        using var db = CreateContext();
+        var auth = CreateService(db);
+
+        var result = await auth.RegisterAsync(
+            "Grace Banda", "ZP-07000", "grace.b@police.gov.zm", "Password123!", "BR-NOPE");
+
+        Assert.Equal(RegistrationResult.UnknownBranch, result);
+        Assert.Equal(0, await db.Users.CountAsync());
+    }
+
+    // ── Credential verification ───────────────────────────────
+
+    [Fact]
+    public async Task A_correct_password_authenticates()
+    {
+        using var db = CreateContext();
+        var auth = CreateService(db);
+        await auth.RegisterAsync("Grace Banda", "ZP-01234", "grace.banda@police.gov.zm", "Password123!", "BR-001");
+
+        var user = await auth.ValidateCredentialsAsync("ZP-01234", "Password123!");
+
+        Assert.NotNull(user);
+        Assert.Equal("Grace Banda", user!.FullName);
+    }
+
+    [Fact]
+    public async Task An_incorrect_password_does_not_authenticate()
+    {
+        using var db = CreateContext();
+        var auth = CreateService(db);
+        await auth.RegisterAsync("Grace Banda", "ZP-01234", "grace.banda@police.gov.zm", "Password123!", "BR-001");
+
+        var user = await auth.ValidateCredentialsAsync("ZP-01234", "WrongPassword!");
+
+        Assert.Null(user);
+    }
+
+    [Fact]
+    public async Task An_unknown_force_number_does_not_authenticate()
+    {
+        using var db = CreateContext();
+        var auth = CreateService(db);
+
+        var user = await auth.ValidateCredentialsAsync("ZP-99999", "Password123!");
+
+        Assert.Null(user);
+    }
+
+    [Fact]
+    public async Task A_signed_in_user_carries_its_branch_and_company()
+    {
+        using var db = CreateContext();
+        var auth = CreateService(db);
+        await auth.RegisterAsync("Grace Banda", "ZP-01234", "grace.banda@police.gov.zm", "Password123!", "BR-004");
+
+        var user = await auth.ValidateCredentialsAsync("ZP-01234", "Password123!");
+
+        Assert.NotNull(user);
+        Assert.Equal("RTSA Kitwe Station", user!.Branch!.Name);
+        Assert.Equal("Road Transport and Safety Agency", user.Branch!.Company!.Name);
     }
 }
