@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="RoadSafety.Tests/RoadSafety.Tests.csproj" />
+  <Project Path="RoadSafety.Web/RoadSafety.Web.csproj" />
+</Solution>
