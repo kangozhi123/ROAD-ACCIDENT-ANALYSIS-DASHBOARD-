@@ -29,7 +29,11 @@ public class AuthService
     }
 
     public async Task<RegistrationResult> RegisterAsync(
-        string fullName, string forceNumber, string email, string password, string branchReferenceNumber)
+    string fullName,
+    string forceNumber, 
+    string email, 
+    string password, 
+    string branchReferenceNumber)
     {
         forceNumber = forceNumber.Trim();
         email = email.Trim();

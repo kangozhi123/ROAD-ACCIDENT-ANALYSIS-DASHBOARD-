@@ -1,0 +1,121 @@
+@page
+@model RoadSafety.Web.Pages.RegisterModel
+@{
+    ViewData["Title"] = "Create Account";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <h1 class="h3 mb-4">Create Officer Account</h1>
+
+        @if (Model.ErrorMessage is not null)
+        {
+            <div class="alert alert-danger">@Model.ErrorMessage</div>
+        }
+
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="mb-3">
+                <label asp-for="Input.FullName" class="form-label"></label>
+                <input asp-for="Input.FullName" class="form-control" />
+                <span asp-validation-for="Input.FullName" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Input.ForceNumber" class="form-label"></label>
+                <input asp-for="Input.ForceNumber" class="form-control" placeholder="ZP-00001" />
+                <span asp-validation-for="Input.ForceNumber" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Input.Email" class="form-label"></label>
+                <input asp-for="Input.Email" class="form-control" />
+                <span asp-validation-for="Input.Email" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Input.CompanyId" class="form-label">Company</label>
+                <select asp-for="Input.CompanyId" id="companySelect" class="form-select">
+                    <option value="">Select a company</option>
+                    @foreach (var company in Model.Companies)
+                    {
+                        <option value="@company.Id">@company.Name</option>
+                    }
+                </select>
+                <span asp-validation-for="Input.CompanyId" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Input.BranchReferenceNumber" class="form-label"></label>
+                <select asp-for="Input.BranchReferenceNumber" id="branchSelect" class="form-select">
+                    <option value="">Select a company first</option>
+                </select>
+                <span asp-validation-for="Input.BranchReferenceNumber" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Input.Password" class="form-label"></label>
+                <input asp-for="Input.Password" class="form-control" autocomplete="new-password" />
+                <span asp-validation-for="Input.Password" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Input.ConfirmPassword" class="form-label"></label>
+                <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="new-password" />
+                <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Create Account</button>
+        </form>
+
+        <p class="mt-3 text-center">
+            <a asp-page="/Index">Back to sign in</a>
+        </p>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script id="branchData" type="application/json">@Html.Raw(Model.BranchesJson)</script>
+    <script>
+        (function () {
+            var branches = JSON.parse(document.getElementById('branchData').textContent);
+            var companySelect = document.getElementById('companySelect');
+            var branchSelect = document.getElementById('branchSelect');
+            var selectedBranch = branchSelect.value;
+
+            function refreshBranches() {
+                var companyId = parseInt(companySelect.value, 10);
+                branchSelect.innerHTML = '';
+
+                if (isNaN(companyId)) {
+                    branchSelect.appendChild(new Option('Select a company first', ''));
+                    return;
+                }
+
+                branchSelect.appendChild(new Option('Select a branch', ''));
+
+                branches
+                    .filter(function (b) { return b.CompanyId === companyId; })
+                    .forEach(function (b) {
+                        var option = new Option(b.Name, b.ReferenceNumber);
+                        // Keep the previous choice selected when the form redisplays
+                        // after a validation error.
+                        if (b.ReferenceNumber === selectedBranch) {
+                            option.selected = true;
+                        }
+                        branchSelect.appendChild(option);
+                    });
+            }
+
+            companySelect.addEventListener('change', function () {
+                selectedBranch = '';
+                refreshBranches();
+            });
+
+            refreshBranches();
+        })();
+    </script>
+}
