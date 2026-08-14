@@ -28,8 +28,10 @@
 |---|---|
 | `RoadSafety.sln` | Solution tying the two projects together |
 | `RoadSafety.Web/Program.cs` | Service registration, auth wiring, middleware pipeline, startup seed |
+| `RoadSafety.Web/Data/Company.cs` | The `Company` entity — top of the hierarchy |
+| `RoadSafety.Web/Data/Branch.cs` | The `Branch` entity — belongs to a company |
 | `RoadSafety.Web/Data/User.cs` | The `User` entity — data only, no behaviour |
-| `RoadSafety.Web/Data/AppDbContext.cs` | EF Core context, unique indexes |
+| `RoadSafety.Web/Data/AppDbContext.cs` | EF Core context, relationships, unique indexes, lookup seed data |
 | `RoadSafety.Web/Data/SeedData.cs` | Applies migrations and inserts the demo officer once at startup |
 | `RoadSafety.Web/Services/AuthService.cs` | Registration and credential verification — all auth logic, no HTTP |
 | `RoadSafety.Web/Pages/Index.cshtml(.cs)` | Login page |
@@ -132,19 +134,34 @@ Untracks database.sqlite and gitignores local database files."
 
 ---
 
-### Task 2: User entity, DbContext, and migration
+### Task 2: Company, Branch and User entities, DbContext, and migration
 
 **Files:**
-- Create: `RoadSafety.Web/Data/User.cs`, `RoadSafety.Web/Data/AppDbContext.cs`
+- Create: `RoadSafety.Web/Data/Company.cs`, `RoadSafety.Web/Data/Branch.cs`, `RoadSafety.Web/Data/User.cs`, `RoadSafety.Web/Data/AppDbContext.cs`
 - Create: `RoadSafety.Tests/AuthServiceTests.cs`
 - Modify: `RoadSafety.Web/Program.cs`, `RoadSafety.Web/appsettings.json`
 
 **Interfaces:**
 - Consumes: the project layout from Task 1
 - Produces:
-  - `RoadSafety.Web.Data.User` with properties `int Id`, `string FullName`, `string ForceNumber`, `string Email`, `string PasswordHash`, `string Station`, `DateTime CreatedAt`
-  - `RoadSafety.Web.Data.AppDbContext` with constructor `AppDbContext(DbContextOptions<AppDbContext> options)` and `DbSet<User> Users`
-  - Test helper `AuthServiceTests.CreateContext()` returning `AppDbContext` backed by open in-memory SQLite
+  - `RoadSafety.Web.Data.Company` with `int Id`, `string ReferenceNumber`, `string Code`, `string Name`, `string? RegistrationNumber`
+  - `RoadSafety.Web.Data.Branch` with `int Id`, `int CompanyId`, `Company? Company`, `string ReferenceNumber`, `string Code`, `string Name`
+  - `RoadSafety.Web.Data.User` with `int Id`, `string FullName`, `string ForceNumber`, `string Email`, `string PasswordHash`, `string BranchReferenceNumber`, `Branch? Branch`, `DateTime CreatedAt`
+  - `RoadSafety.Web.Data.AppDbContext` with constructor `AppDbContext(DbContextOptions<AppDbContext> options)`, and `DbSet<User> Users`, `DbSet<Branch> Branches`, `DbSet<Company> Companies`
+  - Two seeded companies (`CO-001`, `CO-002`) and four seeded branches (`BR-001` … `BR-004`)
+  - Test helper `AuthServiceTests.CreateContext()` returning `AppDbContext` backed by open in-memory SQLite, with companies and branches already seeded
+
+**Design notes.**
+
+The hierarchy is **Company → Branch → User**. `User` deliberately carries no
+company id: the company is reached through the branch, so the fact is stored
+once and cannot disagree with itself.
+
+`User.BranchReferenceNumber` is a foreign key onto `Branch.ReferenceNumber` —
+an *alternate* key, not the primary key. That is what makes the officer row
+carry the reference number itself rather than an opaque integer id. EF supports
+it through `HasPrincipalKey`. `Branch.CompanyId` by contrast is a conventional
+integer FK onto `Company.Id`, matching the Falcon convention.
 
 - [ ] **Step 1: Add the EF Core packages**
 
@@ -194,7 +211,23 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task Users_table_persists_and_returns_a_user()
+    public async Task Companies_and_branches_are_seeded_by_the_model()
+    {
+        using var db = CreateContext();
+
+        Assert.Equal(2, await db.Companies.CountAsync());
+        Assert.Equal(4, await db.Branches.CountAsync());
+
+        var branch = await db.Branches
+            .Include(b => b.Company)
+            .SingleAsync(b => b.ReferenceNumber == "BR-001");
+
+        Assert.Equal("Kitwe Central", branch.Name);
+        Assert.Equal("Zambia Police Service", branch.Company!.Name);
+    }
+
+    [Fact]
+    public async Task Users_table_persists_and_returns_a_user_with_its_branch()
     {
         using var db = CreateContext();
 
@@ -204,15 +237,18 @@ public class AuthServiceTests
             ForceNumber = "ZP-00001",
             Email = "test.officer@police.gov.zm",
             PasswordHash = "not-a-real-hash",
-            Station = "kitwe_central",
+            BranchReferenceNumber = "BR-001",
             CreatedAt = DateTime.UtcNow
         });
         await db.SaveChangesAsync();
 
-        var found = await db.Users.SingleAsync(u => u.ForceNumber == "ZP-00001");
+        var found = await db.Users
+            .Include(u => u.Branch)
+            .SingleAsync(u => u.ForceNumber == "ZP-00001");
 
         Assert.Equal("Test Officer", found.FullName);
-        Assert.Equal("kitwe_central", found.Station);
+        Assert.Equal("BR-001", found.BranchReferenceNumber);
+        Assert.Equal("Kitwe Central", found.Branch!.Name);
     }
 
     [Fact]
@@ -228,24 +264,96 @@ public class AuthServiceTests
                 ForceNumber = "ZP-00002",
                 Email = $"officer{i}@police.gov.zm",
                 PasswordHash = "not-a-real-hash",
-                Station = "kitwe_central",
+                BranchReferenceNumber = "BR-001",
                 CreatedAt = DateTime.UtcNow
             });
         }
 
         await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
     }
+
+    [Fact]
+    public async Task A_user_cannot_reference_a_branch_that_does_not_exist()
+    {
+        using var db = CreateContext();
+
+        db.Users.Add(new User
+        {
+            FullName = "Ghost Officer",
+            ForceNumber = "ZP-00003",
+            Email = "ghost@police.gov.zm",
+            PasswordHash = "not-a-real-hash",
+            BranchReferenceNumber = "BR-DOES-NOT-EXIST",
+            CreatedAt = DateTime.UtcNow
+        });
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+    }
 }
 ```
+
+Note the SQLite specifics: foreign keys are enforced only when the connection
+has them enabled, which `Microsoft.Data.Sqlite` does by default, so the last
+test is meaningful rather than vacuous.
 
 - [ ] **Step 3: Run the tests to verify they fail**
 
 ```bash
 dotnet test
 ```
-Expected: FAIL — compile error, `User` and `AppDbContext` do not exist.
+Expected: FAIL — compile error, `Company`, `Branch`, `User` and `AppDbContext`
+do not exist.
 
-- [ ] **Step 4: Create the User entity**
+- [ ] **Step 4: Create the Company entity**
+
+`RoadSafety.Web/Data/Company.cs`:
+
+```csharp
+namespace RoadSafety.Web.Data;
+
+/// <summary>
+/// The organisation a branch belongs to. Sits at the top of the
+/// Company -> Branch -> User hierarchy.
+/// </summary>
+public class Company
+{
+    public int Id { get; set; }
+    public string ReferenceNumber { get; set; } = string.Empty;
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? RegistrationNumber { get; set; }
+
+    public ICollection<Branch> Branches { get; set; } = new List<Branch>();
+}
+```
+
+- [ ] **Step 5: Create the Branch entity**
+
+`RoadSafety.Web/Data/Branch.cs`:
+
+```csharp
+namespace RoadSafety.Web.Data;
+
+/// <summary>
+/// A station belonging to a company. Officers reference a branch by its
+/// ReferenceNumber rather than by its integer id.
+/// </summary>
+public class Branch
+{
+    public int Id { get; set; }
+
+    public int CompanyId { get; set; }
+    public Company? Company { get; set; }
+
+    public string ReferenceNumber { get; set; } = string.Empty;
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+
+    public ICollection<User> Users { get; set; } = new List<User>();
+}
+```
+
+- [ ] **Step 6: Create the User entity**
 
 `RoadSafety.Web/Data/User.cs`:
 
@@ -255,6 +363,9 @@ namespace RoadSafety.Web.Data;
 /// <summary>
 /// A police officer who can sign in. ForceNumber is the login identifier,
 /// not the email address — this mirrors how officers are actually identified.
+///
+/// There is deliberately no CompanyId here: the company is reached through
+/// the branch, so it is stored once and cannot contradict itself.
 /// </summary>
 public class User
 {
@@ -263,12 +374,15 @@ public class User
     public string ForceNumber { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
-    public string Station { get; set; } = string.Empty;
+
+    public string BranchReferenceNumber { get; set; } = string.Empty;
+    public Branch? Branch { get; set; }
+
     public DateTime CreatedAt { get; set; }
 }
 ```
 
-- [ ] **Step 5: Create the DbContext**
+- [ ] **Step 7: Create the DbContext with seed data**
 
 `RoadSafety.Web/Data/AppDbContext.cs`:
 
@@ -284,25 +398,81 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<User> Users => Set<User>();
+    public DbSet<Branch> Branches => Set<Branch>();
+    public DbSet<Company> Companies => Set<Company>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Company>(entity =>
+        {
+            entity.Property(c => c.ReferenceNumber).IsRequired().HasMaxLength(50);
+            entity.Property(c => c.Code).IsRequired().HasMaxLength(50);
+            entity.Property(c => c.Name).IsRequired().HasMaxLength(200);
+            entity.Property(c => c.RegistrationNumber).HasMaxLength(100);
+
+            entity.HasIndex(c => c.ReferenceNumber).IsUnique();
+        });
+
+        modelBuilder.Entity<Branch>(entity =>
+        {
+            entity.Property(b => b.ReferenceNumber).IsRequired().HasMaxLength(50);
+            entity.Property(b => b.Code).IsRequired().HasMaxLength(50);
+            entity.Property(b => b.Name).IsRequired().HasMaxLength(200);
+
+            entity.HasIndex(b => b.ReferenceNumber).IsUnique();
+
+            entity.HasOne(b => b.Company)
+                  .WithMany(c => c.Branches)
+                  .HasForeignKey(b => b.CompanyId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<User>(entity =>
         {
             entity.Property(u => u.FullName).IsRequired();
             entity.Property(u => u.ForceNumber).IsRequired();
             entity.Property(u => u.Email).IsRequired();
             entity.Property(u => u.PasswordHash).IsRequired();
-            entity.Property(u => u.Station).IsRequired();
+            entity.Property(u => u.BranchReferenceNumber).IsRequired().HasMaxLength(50);
 
             entity.HasIndex(u => u.ForceNumber).IsUnique();
             entity.HasIndex(u => u.Email).IsUnique();
+
+            // The foreign key targets Branch.ReferenceNumber, an alternate key,
+            // rather than Branch.Id. HasPrincipalKey is what permits that.
+            entity.HasOne(u => u.Branch)
+                  .WithMany(b => b.Users)
+                  .HasForeignKey(u => u.BranchReferenceNumber)
+                  .HasPrincipalKey(b => b.ReferenceNumber)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
+
+        SeedLookups(modelBuilder);
+    }
+
+    /// <summary>
+    /// Companies and branches are static reference data, so they are seeded
+    /// through the model and land in the migration. The demo user cannot be
+    /// seeded this way because its password hash is randomly salted.
+    /// </summary>
+    private static void SeedLookups(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Company>().HasData(
+            new Company { Id = 1, ReferenceNumber = "CO-001", Code = "ZPS", Name = "Zambia Police Service", RegistrationNumber = "ZPS-1965" },
+            new Company { Id = 2, ReferenceNumber = "CO-002", Code = "RTSA", Name = "Road Transport and Safety Agency", RegistrationNumber = "RTSA-2002" }
+        );
+
+        modelBuilder.Entity<Branch>().HasData(
+            new Branch { Id = 1, CompanyId = 1, ReferenceNumber = "BR-001", Code = "KTW-CENTRAL", Name = "Kitwe Central" },
+            new Branch { Id = 2, CompanyId = 1, ReferenceNumber = "BR-002", Code = "WUSAKILE",    Name = "Wusakile" },
+            new Branch { Id = 3, CompanyId = 1, ReferenceNumber = "BR-003", Code = "CHAMBOLI",    Name = "Chamboli" },
+            new Branch { Id = 4, CompanyId = 2, ReferenceNumber = "BR-004", Code = "RTSA-KTW",    Name = "RTSA Kitwe Station" }
+        );
     }
 }
 ```
 
-- [ ] **Step 6: Register the DbContext and set the connection string**
+- [ ] **Step 8: Register the DbContext and set the connection string**
 
 In `RoadSafety.Web/appsettings.json`, add a `ConnectionStrings` section as a sibling of the existing `Logging` section:
 
@@ -335,31 +505,33 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 ```
 
-- [ ] **Step 7: Run the tests to verify they pass**
+- [ ] **Step 9: Run the tests to verify they pass**
 
 ```bash
 dotnet test
 ```
-Expected: PASS, 2 tests.
+Expected: PASS, 4 tests.
 
-- [ ] **Step 8: Create the migration**
+- [ ] **Step 10: Create the migration**
 
 ```bash
 dotnet ef migrations add InitialCreate --project RoadSafety.Web
 ```
-Expected: a `RoadSafety.Web/Migrations/` folder appears.
+Expected: a `RoadSafety.Web/Migrations/` folder appears, and the generated
+migration contains `InsertData` calls for the two companies and four branches.
 
 If this fails with a version-mismatch error, the global tool is older than the packages — run `dotnet tool update --global dotnet-ef --version 10.0.11` and retry.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 11: Commit**
 
 ```bash
 git add -A
-git commit -m "Add User entity, AppDbContext, and initial migration
+git commit -m "Add Company, Branch and User entities with initial migration
 
-Preserves the schema from the PHP version, including force number as
-the unique login identifier. Unique indexes on ForceNumber and Email
-are enforced by the database rather than by application checks alone."
+Replaces the PHP schema's free-text station column with a
+Company -> Branch -> User hierarchy. Officers reference a branch by its
+ReferenceNumber via an EF alternate key. Companies and branches are
+static reference data and are seeded through the migration."
 ```
 
 ---
@@ -373,13 +545,13 @@ are enforced by the database rather than by application checks alone."
 **Interfaces:**
 - Consumes: `User`, `AppDbContext` from Task 2
 - Produces:
-  - `enum RoadSafety.Web.Services.RegistrationResult { Success, DuplicateForceNumber, DuplicateEmail }`
+  - `enum RoadSafety.Web.Services.RegistrationResult { Success, DuplicateForceNumber, DuplicateEmail, UnknownBranch }`
   - `class RoadSafety.Web.Services.AuthService` with constructor `AuthService(AppDbContext db, IPasswordHasher<User> hasher)`
-  - `Task<RegistrationResult> RegisterAsync(string fullName, string forceNumber, string email, string password, string station)`
+  - `Task<RegistrationResult> RegisterAsync(string fullName, string forceNumber, string email, string password, string branchReferenceNumber)`
 
 - [ ] **Step 1: Write the failing tests**
 
-Add these three tests inside the existing `AuthServiceTests` class in `RoadSafety.Tests/AuthServiceTests.cs`, and add `using Microsoft.AspNetCore.Identity;` and `using RoadSafety.Web.Services;` to the top of that file:
+Add these four tests inside the existing `AuthServiceTests` class in `RoadSafety.Tests/AuthServiceTests.cs`, and add `using Microsoft.AspNetCore.Identity;` and `using RoadSafety.Web.Services;` to the top of that file:
 
 ```csharp
     private static AuthService CreateService(AppDbContext db) =>
@@ -392,13 +564,14 @@ Add these three tests inside the existing `AuthServiceTests` class in `RoadSafet
         var auth = CreateService(db);
 
         var result = await auth.RegisterAsync(
-            "Grace Banda", "ZP-01234", "grace.banda@police.gov.zm", "Password123!", "kitwe_central");
+            "Grace Banda", "ZP-01234", "grace.banda@police.gov.zm", "Password123!", "BR-001");
 
         Assert.Equal(RegistrationResult.Success, result);
 
         var stored = await db.Users.SingleAsync(u => u.ForceNumber == "ZP-01234");
         Assert.NotEqual("Password123!", stored.PasswordHash);
         Assert.NotEmpty(stored.PasswordHash);
+        Assert.Equal("BR-001", stored.BranchReferenceNumber);
     }
 
     [Fact]
@@ -407,8 +580,8 @@ Add these three tests inside the existing `AuthServiceTests` class in `RoadSafet
         using var db = CreateContext();
         var auth = CreateService(db);
 
-        await auth.RegisterAsync("First Officer", "ZP-05555", "first@police.gov.zm", "Password123!", "kitwe_central");
-        var result = await auth.RegisterAsync("Second Officer", "ZP-05555", "second@police.gov.zm", "Password123!", "wusakile");
+        await auth.RegisterAsync("First Officer", "ZP-05555", "first@police.gov.zm", "Password123!", "BR-001");
+        var result = await auth.RegisterAsync("Second Officer", "ZP-05555", "second@police.gov.zm", "Password123!", "BR-002");
 
         Assert.Equal(RegistrationResult.DuplicateForceNumber, result);
         Assert.Equal(1, await db.Users.CountAsync());
@@ -420,10 +593,23 @@ Add these three tests inside the existing `AuthServiceTests` class in `RoadSafet
         using var db = CreateContext();
         var auth = CreateService(db);
 
-        await auth.RegisterAsync("First Officer", "ZP-06001", "shared@police.gov.zm", "Password123!", "kitwe_central");
-        var result = await auth.RegisterAsync("Second Officer", "ZP-06002", "shared@police.gov.zm", "Password123!", "wusakile");
+        await auth.RegisterAsync("First Officer", "ZP-06001", "shared@police.gov.zm", "Password123!", "BR-001");
+        var result = await auth.RegisterAsync("Second Officer", "ZP-06002", "shared@police.gov.zm", "Password123!", "BR-002");
 
         Assert.Equal(RegistrationResult.DuplicateEmail, result);
+    }
+
+    [Fact]
+    public async Task Registration_rejects_an_unknown_branch()
+    {
+        using var db = CreateContext();
+        var auth = CreateService(db);
+
+        var result = await auth.RegisterAsync(
+            "Grace Banda", "ZP-07000", "grace.b@police.gov.zm", "Password123!", "BR-NOPE");
+
+        Assert.Equal(RegistrationResult.UnknownBranch, result);
+        Assert.Equal(0, await db.Users.CountAsync());
     }
 ```
 
@@ -449,7 +635,8 @@ public enum RegistrationResult
 {
     Success,
     DuplicateForceNumber,
-    DuplicateEmail
+    DuplicateEmail,
+    UnknownBranch
 }
 
 /// <summary>
@@ -468,10 +655,11 @@ public class AuthService
     }
 
     public async Task<RegistrationResult> RegisterAsync(
-        string fullName, string forceNumber, string email, string password, string station)
+        string fullName, string forceNumber, string email, string password, string branchReferenceNumber)
     {
         forceNumber = forceNumber.Trim();
         email = email.Trim();
+        branchReferenceNumber = branchReferenceNumber.Trim();
 
         if (await _db.Users.AnyAsync(u => u.ForceNumber == forceNumber))
         {
@@ -483,12 +671,19 @@ public class AuthService
             return RegistrationResult.DuplicateEmail;
         }
 
+        // Checked explicitly so a bad branch produces a typed result rather
+        // than a foreign-key exception surfacing from SaveChangesAsync.
+        if (!await _db.Branches.AnyAsync(b => b.ReferenceNumber == branchReferenceNumber))
+        {
+            return RegistrationResult.UnknownBranch;
+        }
+
         var user = new User
         {
             FullName = fullName.Trim(),
             ForceNumber = forceNumber,
             Email = email,
-            Station = station,
+            BranchReferenceNumber = branchReferenceNumber,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -509,7 +704,7 @@ public class AuthService
 ```bash
 dotnet test
 ```
-Expected: PASS, 5 tests.
+Expected: PASS, 8 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -517,9 +712,10 @@ Expected: PASS, 5 tests.
 git add -A
 git commit -m "Add registration to AuthService with hashed passwords
 
-Duplicate force numbers and emails are reported as typed results rather
-than surfaced as database exceptions. Passwords are hashed with
-IPasswordHasher; the plain text is never assigned to the entity."
+Duplicate force numbers, duplicate emails, and unknown branch references
+are reported as typed results rather than surfaced as database
+exceptions. Passwords are hashed with IPasswordHasher; the plain text is
+never assigned to the entity."
 ```
 
 ---

@@ -89,7 +89,36 @@ than an abandoned codebase.
 
 ### Data model
 
-The `User` entity preserves the existing schema exactly:
+**Amended 2026-08-15:** the PHP schema's free-text `Station` column is replaced
+by a `Branch` entity that officers reference. A station *is* a branch in this
+domain, so keeping both would give one concept two fields. This follows the
+`MstBranch` convention already used in the Falcon codebase.
+
+**Amended 2026-08-15 (second):** a `Company` entity sits above `Branch`. The
+hierarchy is **Company → Branch → User**. `User` does not carry a company id;
+the company is reached through the branch, so the fact is stored once.
+
+`Company`:
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `Id` | int | identity |
+| `ReferenceNumber` | string(50) | required, **unique** |
+| `Code` | string(50) | required |
+| `Name` | string(200) | required, display name |
+| `RegistrationNumber` | string(100) | optional |
+
+`Branch`:
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `Id` | int | identity |
+| `CompanyId` | int | required, FK → `Company.Id` |
+| `ReferenceNumber` | string(50) | required, **unique**, referenced by `User` |
+| `Code` | string(50) | required |
+| `Name` | string(200) | required, display name |
+
+`User`:
 
 | Field | Type | Notes |
 |-------|------|-------|
@@ -98,11 +127,23 @@ The `User` entity preserves the existing schema exactly:
 | `ForceNumber` | string | required, **unique**, login identifier |
 | `Email` | string | required, unique |
 | `PasswordHash` | string | required |
-| `Station` | string | required |
+| `BranchReferenceNumber` | string(50) | required, FK → `Branch.ReferenceNumber` |
 | `CreatedAt` | DateTime | UTC |
+
+The foreign key targets `Branch.ReferenceNumber` rather than `Branch.Id`, via
+an EF alternate key, so the `User` row carries the reference number itself.
 
 Force-number-as-login is retained: it is correct domain modelling for a police
 system, not an accident of the original code.
+
+Companies and branches are seeded through EF `HasData` in the migration — their
+values are static, so nothing prevents it. Only the demo user needs startup
+seeding, for the reason given under Phase 1 seeding.
+
+Registration presents company and branch as two dependent dropdowns: choosing a
+company filters the branch list. The filtering is done client-side from a small
+embedded JSON payload, which avoids a page round-trip without introducing an
+API endpoint.
 
 EF Core with SQLite, one migration. `database.sqlite` is gitignored.
 
