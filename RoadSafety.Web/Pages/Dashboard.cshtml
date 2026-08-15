@@ -23,7 +23,31 @@
         once the collision dataset is imported.
     </p>
 
-    <form method="post" asp-page="/Logout">
+    <form method="post" asp-page="/Logout" id="signOutForm">
         <button type="submit" class="btn-ghost-brand">Sign out</button>
     </form>
 </div>
+
+@section Scripts {
+    <script>
+        document.getElementById('signOutForm').addEventListener('submit', function (event) {
+            if (this.dataset.confirmed === 'true') {
+                return;
+            }
+
+            event.preventDefault();
+            var form = this;
+
+            notify.confirm({
+                title: 'Sign out?',
+                text: 'You will need your force number to sign back in.',
+                confirmText: 'Sign out'
+            }).then(function (confirmed) {
+                if (confirmed) {
+                    form.dataset.confirmed = 'true';
+                    form.submit();
+                }
+            });
+        });
+    </script>
+}

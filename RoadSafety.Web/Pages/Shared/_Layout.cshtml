@@ -17,7 +17,14 @@
         @RenderBody()
     </main>
 
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/lib/sweetalert2/sweetalert2.all.min.js"></script>
+    <script src="~/js/notify.js" asp-append-version="true"></script>
+
+    @if (TempData["Toast"] is string toast)
+    {
+        <script>notify.toast(@Html.Raw(Json.Serialize(toast)));</script>
+    }
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

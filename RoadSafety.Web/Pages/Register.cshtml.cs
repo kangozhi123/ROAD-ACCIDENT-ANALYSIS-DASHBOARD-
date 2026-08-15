@@ -62,6 +62,7 @@ public class RegisterModel : PageModel
                 return Page();
 
             default:
+                TempData["Toast"] = "Account created. Sign in with your force number.";
                 return RedirectToPage("/Index");
         }
     }
