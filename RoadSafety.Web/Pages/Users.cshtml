@@ -1,0 +1,281 @@
+@page
+@model RoadSafety.Web.Pages.UsersModel
+@using RoadSafety.Web.ViewModels
+@{
+    ViewData["Title"] = "Officers";
+}
+
+@section Styles {
+    <partial name="_LibStyles" />
+}
+
+<partial name="_Breadcrumb" model="@(new[] { new Crumb("Dashboard", "/Dashboard"), new Crumb("Officers") })" />
+
+<div class="page-head">
+    <div>
+        <h1 class="page-head__title">Officers</h1>
+        <p class="page-head__sub">@Model.Officers.Count registered across all stations</p>
+    </div>
+
+    <button type="button" class="btn-primary-brand" data-bs-toggle="modal" data-bs-target="#addOfficer">
+        Add officer
+    </button>
+</div>
+
+<section class="card">
+    <table id="officersTable" class="table" style="width:100%">
+        <thead>
+            <tr>
+                <th>Officer</th>
+                <th>Force number</th>
+                <th>Station</th>
+                <th>Organisation</th>
+                <th>Registered</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var officer in Model.Officers)
+            {
+                var initials = string.Concat(
+                    officer.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                                    .Take(2)
+                                    .Select(part => char.ToUpperInvariant(part[0])));
+
+                <tr>
+                    <td>
+                        <div class="cell-person">
+                            <span class="people__avatar" aria-hidden="true">@initials</span>
+                            <span>
+                                <span class="people__name">@officer.FullName</span>
+                                <span class="people__meta">@officer.Email</span>
+                            </span>
+                        </div>
+                    </td>
+                    <td>@officer.ForceNumber</td>
+                    <td>@officer.BranchName</td>
+                    <td>@officer.CompanyName</td>
+                    <td data-order="@officer.CreatedAt.ToString("s")">@officer.CreatedAt.ToString("d MMM yyyy")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</section>
+
+@* ── Add officer: three-step dialog ─────────────────────────────────── *@
+<div class="modal fade" id="addOfficer" tabindex="-1" aria-labelledby="addOfficerTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" novalidate>
+                <div class="modal-header">
+                    <h2 class="modal-title" id="addOfficerTitle">Add an officer</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    @if (Model.ErrorMessage is not null)
+                    {
+                        <div class="alert-brand" role="alert">@Model.ErrorMessage</div>
+                    }
+
+                    <div id="officerStepper" class="bs-stepper">
+                        <div class="bs-stepper-header" role="tablist">
+                            <div class="step" data-target="#stepIdentity">
+                                <button type="button" class="step-trigger" role="tab"
+                                        id="tabIdentity" aria-controls="stepIdentity">
+                                    <span class="bs-stepper-circle">1</span>
+                                    <span class="bs-stepper-label">Officer</span>
+                                </button>
+                            </div>
+                            <div class="line"></div>
+
+                            <div class="step" data-target="#stepPosting">
+                                <button type="button" class="step-trigger" role="tab"
+                                        id="tabPosting" aria-controls="stepPosting">
+                                    <span class="bs-stepper-circle">2</span>
+                                    <span class="bs-stepper-label">Posting</span>
+                                </button>
+                            </div>
+                            <div class="line"></div>
+
+                            <div class="step" data-target="#stepAccess">
+                                <button type="button" class="step-trigger" role="tab"
+                                        id="tabAccess" aria-controls="stepAccess">
+                                    <span class="bs-stepper-circle">3</span>
+                                    <span class="bs-stepper-label">Access</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bs-stepper-content">
+
+                            <div id="stepIdentity" class="content" role="tabpanel" aria-labelledby="tabIdentity">
+                                <div class="field-grid">
+                                    <div class="field field--wide">
+                                        <label asp-for="Input.FullName"></label>
+                                        <input asp-for="Input.FullName" placeholder="Grace Banda" required />
+                                        <span class="field-error" asp-validation-for="Input.FullName"></span>
+                                    </div>
+
+                                    <div class="field">
+                                        <label asp-for="Input.ForceNumber"></label>
+                                        <input asp-for="Input.ForceNumber" placeholder="ZP-00123" required />
+                                        <span class="field-error" asp-validation-for="Input.ForceNumber"></span>
+                                    </div>
+
+                                    <div class="field">
+                                        <label asp-for="Input.Email"></label>
+                                        <input asp-for="Input.Email" type="email"
+                                               placeholder="grace.banda@police.gov.zm" required />
+                                        <span class="field-error" asp-validation-for="Input.Email"></span>
+                                    </div>
+                                </div>
+
+                                <div class="step-actions">
+                                    <span></span>
+                                    <button type="button" class="btn-primary-brand" data-step-next>Continue</button>
+                                </div>
+                            </div>
+
+                            <div id="stepPosting" class="content" role="tabpanel" aria-labelledby="tabPosting">
+                                <div class="field-grid">
+                                    <div class="field">
+                                        <label asp-for="Input.CompanyId"></label>
+                                        <select asp-for="Input.CompanyId" id="modalCompany" required>
+                                            <option value="">Select an organisation</option>
+                                            @foreach (var company in Model.Companies)
+                                            {
+                                                <option value="@company.Id">@company.Name</option>
+                                            }
+                                        </select>
+                                        <span class="field-error" asp-validation-for="Input.CompanyId"></span>
+                                    </div>
+
+                                    <div class="field">
+                                        <label asp-for="Input.BranchReferenceNumber"></label>
+                                        <select asp-for="Input.BranchReferenceNumber" id="modalBranch" required>
+                                            <option value="">Choose an organisation first</option>
+                                        </select>
+                                        <span class="field-error" asp-validation-for="Input.BranchReferenceNumber"></span>
+                                    </div>
+                                </div>
+
+                                <div class="step-actions">
+                                    <button type="button" class="btn-ghost-brand" data-step-prev>Back</button>
+                                    <button type="button" class="btn-primary-brand" data-step-next>Continue</button>
+                                </div>
+                            </div>
+
+                            <div id="stepAccess" class="content" role="tabpanel" aria-labelledby="tabAccess">
+                                <div class="field-grid">
+                                    <div class="field">
+                                        <label asp-for="Input.Password"></label>
+                                        <input asp-for="Input.Password" placeholder="At least 8 characters"
+                                               minlength="8" required autocomplete="new-password" />
+                                        <span class="field-error" asp-validation-for="Input.Password"></span>
+                                    </div>
+
+                                    <div class="field">
+                                        <label asp-for="Input.ConfirmPassword"></label>
+                                        <input asp-for="Input.ConfirmPassword" placeholder="Repeat the password"
+                                               required autocomplete="new-password" />
+                                        <span class="field-error" asp-validation-for="Input.ConfirmPassword"></span>
+                                    </div>
+                                </div>
+
+                                <p class="step-note">
+                                    The officer signs in with their force number and this password.
+                                    Ask them to change it after their first sign in.
+                                </p>
+
+                                <div class="step-actions">
+                                    <button type="button" class="btn-ghost-brand" data-step-prev>Back</button>
+                                    <button type="submit" class="btn-primary-brand">Add officer</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_LibScripts" />
+
+    <script id="branchData" type="application/json">@Html.Raw(Model.BranchesJson)</script>
+    <script>
+        (function () {
+            /* ── Officers table ─────────────────────────────────────── */
+            new DataTable('#officersTable', {
+                order: [[4, 'desc']],
+                columnDefs: [{ orderable: false, targets: 0 }]
+            });
+
+            /* ── Add-officer stepper ────────────────────────────────── */
+            var stepperEl = document.getElementById('officerStepper');
+            var stepper = new Stepper(stepperEl, { linear: true, animation: true });
+
+            // Only advance when the current step's own fields are valid, so a
+            // reader cannot skip to the end and submit an empty form.
+            function stepIsValid(panel) {
+                var fields = panel.querySelectorAll('input, select');
+                for (var i = 0; i < fields.length; i++) {
+                    if (!fields[i].checkValidity()) {
+                        fields[i].reportValidity();
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            stepperEl.addEventListener('click', function (event) {
+                var next = event.target.closest('[data-step-next]');
+                var prev = event.target.closest('[data-step-prev]');
+
+                if (next && stepIsValid(next.closest('.content'))) {
+                    stepper.next();
+                } else if (prev) {
+                    stepper.previous();
+                }
+            });
+
+            /* ── Station list follows the organisation ──────────────── */
+            var branches = JSON.parse(document.getElementById('branchData').textContent);
+            var companySelect = document.getElementById('modalCompany');
+            var branchSelect = document.getElementById('modalBranch');
+            var chosen = '@Model.Input.BranchReferenceNumber';
+
+            function refreshBranches(keep) {
+                var companyId = parseInt(companySelect.value, 10);
+                branchSelect.innerHTML = '';
+
+                if (isNaN(companyId)) {
+                    branchSelect.appendChild(new Option('Choose an organisation first', ''));
+                    return;
+                }
+
+                branchSelect.appendChild(new Option('Select a station', ''));
+                branches
+                    .filter(function (b) { return b.CompanyId === companyId; })
+                    .forEach(function (b) {
+                        var option = new Option(b.Name, b.ReferenceNumber);
+                        if (keep && b.ReferenceNumber === chosen) option.selected = true;
+                        branchSelect.appendChild(option);
+                    });
+            }
+
+            companySelect.addEventListener('change', function () { refreshBranches(false); });
+            refreshBranches(true);
+
+            /* ── Reopen after a rejected submission ─────────────────── */
+        @if (Model.ReopenDialog)
+        {
+            <text>
+            new bootstrap.Modal(document.getElementById('addOfficer')).show();
+            </text>
+        }
+        })();
+    </script>
+}
