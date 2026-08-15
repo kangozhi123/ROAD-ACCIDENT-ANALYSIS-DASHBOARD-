@@ -1583,3 +1583,58 @@ table.dataTable tbody tr:hover td {
     color: var(--slate);
     line-height: 1.45;
 }
+
+/* Role tags and a fixed posting notice ---------------------------------- */
+
+.role-tag {
+    display: inline-block;
+    padding: .2rem .55rem;
+    border-radius: 6px;
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+    white-space: nowrap;
+    background: var(--field);
+    border: 1px solid var(--line);
+    color: var(--slate);
+}
+
+.role-tag--stationadministrator {
+    background: #E7F0FE;
+    border-color: #C5DCFB;
+    color: var(--fill-azure);
+}
+
+.role-tag--systemadministrator {
+    background: #E9E9FD;
+    border-color: #CFCFFA;
+    color: var(--fill-indigo);
+}
+
+.posting-fixed {
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-field);
+    padding: 1rem 1.15rem;
+}
+
+.posting-fixed__label {
+    display: block;
+    font-size: .74rem;
+    font-weight: 600;
+    color: var(--slate);
+}
+
+.posting-fixed__value {
+    display: block;
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-top: .15rem;
+}
+
+.posting-fixed p {
+    margin: .6rem 0 0;
+    font-size: .8rem;
+    line-height: 1.55;
+    color: var(--slate);
+}

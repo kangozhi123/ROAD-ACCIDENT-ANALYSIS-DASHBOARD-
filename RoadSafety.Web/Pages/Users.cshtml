@@ -11,10 +11,12 @@
 
 <partial name="_PageHeader" model="@(new PageHeader(
     "Officers",
-    $"{Model.Officers.Count} registered across all stations",
+    Model.CanChooseBranch
+        ? $"{Model.Officers.Count} registered across all stations"
+        : $"{Model.Officers.Count} at {User.FindFirst("BranchName")?.Value}",
     new[] { new Crumb("Dashboard", "/Dashboard"), new Crumb("Officers") },
-    ActionText: "Add officer",
-    ActionModalTarget: "#addOfficer"))" />
+    ActionText: Model.CanManage ? "Add officer" : null,
+    ActionModalTarget: Model.CanManage ? "#addOfficer" : null))" />
 
 <section class="card">
     <table id="officersTable" class="table" style="width:100%">
@@ -24,6 +26,7 @@
                 <th>Force number</th>
                 <th>Station</th>
                 <th>Organisation</th>
+                <th>Role</th>
                 <th>Registered</th>
                 <th class="col-actions">Actions</th>
             </tr>
@@ -49,6 +52,7 @@
                     <td>@officer.ForceNumber</td>
                     <td>@officer.BranchName</td>
                     <td>@officer.CompanyName</td>
+                    <td><span class="role-tag role-tag--@officer.Role.ToString().ToLowerInvariant()">@RoleLabel(officer.Role)</span></td>
                     <td data-order="@officer.CreatedAt.ToString("s")">@officer.CreatedAt.ToString("d MMM yyyy")</td>
                     <td>
                         <div class="row-actions">
@@ -59,6 +63,8 @@
                                 </svg>
                             </button>
 
+                            @if (Model.CanManage)
+                            {
                             <button type="button" class="icon-btn" data-edit="@officer.Id"
                                     title="Edit @officer.FullName" aria-label="Edit @officer.FullName">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -73,6 +79,7 @@
                                     <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
                                 </svg>
                             </button>
+                            }
                         </div>
                     </td>
                 </tr>
@@ -230,27 +237,44 @@
                             </div>
 
                             <div id="stepPosting" class="content" role="tabpanel" aria-labelledby="tabPosting">
-                                <div class="field-grid">
-                                    <div class="field">
-                                        <label asp-for="Input.CompanyId"></label>
-                                        <select asp-for="Input.CompanyId" id="modalCompany" required>
-                                            <option value="">Select an organisation</option>
-                                            @foreach (var company in Model.Companies)
-                                            {
-                                                <option value="@company.Id">@company.Name</option>
-                                            }
-                                        </select>
-                                        <span class="field-error" asp-validation-for="Input.CompanyId"></span>
-                                    </div>
+                                @if (Model.CanChooseBranch)
+                                {
+                                    <div class="field-grid">
+                                        <div class="field">
+                                            <label asp-for="Input.CompanyId"></label>
+                                            <select asp-for="Input.CompanyId" id="modalCompany" required>
+                                                <option value="">Select an organisation</option>
+                                                @foreach (var company in Model.Companies)
+                                                {
+                                                    <option value="@company.Id">@company.Name</option>
+                                                }
+                                            </select>
+                                            <span class="field-error" asp-validation-for="Input.CompanyId"></span>
+                                        </div>
 
-                                    <div class="field">
-                                        <label asp-for="Input.BranchReferenceNumber"></label>
-                                        <select asp-for="Input.BranchReferenceNumber" id="modalBranch" required>
-                                            <option value="">Choose an organisation first</option>
-                                        </select>
-                                        <span class="field-error" asp-validation-for="Input.BranchReferenceNumber"></span>
+                                        <div class="field">
+                                            <label asp-for="Input.BranchReferenceNumber"></label>
+                                            <select asp-for="Input.BranchReferenceNumber" id="modalBranch" required>
+                                                <option value="">Choose an organisation first</option>
+                                            </select>
+                                            <span class="field-error" asp-validation-for="Input.BranchReferenceNumber"></span>
+                                        </div>
                                     </div>
-                                </div>
+                                }
+                                else
+                                {
+                                    @* Hidden rather than disabled: the fields still have to satisfy
+                                       validation, and the server resolves the posting regardless of
+                                       what arrives here. *@
+                                    <input type="hidden" asp-for="Input.CompanyId" value="@Model.OwnCompanyId" />
+                                    <input type="hidden" asp-for="Input.BranchReferenceNumber" value="@Model.OwnBranchReference" />
+
+                                    <div class="posting-fixed">
+                                        <span class="posting-fixed__label">Station</span>
+                                        <span class="posting-fixed__value">@User.FindFirst("BranchName")?.Value</span>
+                                        <p>Officers you add join your own station. Only a system administrator can post someone elsewhere.</p>
+                                    </div>
+                                }
 
                                 <div class="step-actions">
                                     <button type="button" class="btn-ghost-brand" data-step-prev>Back</button>
@@ -294,6 +318,15 @@
     </div>
 </div>
 
+@functions {
+    static string RoleLabel(RoadSafety.Web.Models.UserRole role) => role switch
+    {
+        RoadSafety.Web.Models.UserRole.SystemAdministrator => "System admin",
+        RoadSafety.Web.Models.UserRole.StationAdministrator => "Station admin",
+        _ => "Officer"
+    };
+}
+
 @section Scripts {
     <partial name="_LibScripts" />
 
@@ -307,10 +340,10 @@
 
             /* ── Officers table ─────────────────────────────────────── */
             var table = new DataTable('#officersTable', {
-                order: [[4, 'desc']],
+                order: [[5, 'desc']],
                 columnDefs: [
-                    { orderable: false, targets: [0, 5] },
-                    { searchable: false, targets: 5 }
+                    { orderable: false, targets: [0, 6] },
+                    { searchable: false, targets: 6 }
                 ]
             });
 
@@ -559,14 +592,17 @@
 
             var addCompany = document.getElementById('modalCompany');
             var addBranch = document.getElementById('modalBranch');
-            var chosen = '@Model.Input.BranchReferenceNumber';
 
-            addCompany.addEventListener('change', function () {
-                fillBranches(addBranch, parseInt(addCompany.value, 10), null);
-            });
+            if (addCompany && addBranch) {
+                var chosen = '@Model.Input.BranchReferenceNumber';
 
-            if (addCompany.value) {
-                fillBranches(addBranch, parseInt(addCompany.value, 10), chosen);
+                addCompany.addEventListener('change', function () {
+                    fillBranches(addBranch, parseInt(addCompany.value, 10), null);
+                });
+
+                if (addCompany.value) {
+                    fillBranches(addBranch, parseInt(addCompany.value, 10), chosen);
+                }
             }
 
         @if (Model.ReopenDialog)

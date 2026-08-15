@@ -28,8 +28,19 @@ public class UsersModel(AppDbContext db, AuthService auth, OfficerService office
     /// </summary>
     public bool ReopenDialog { get; private set; }
 
-    private int CurrentUserId =>
-        int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
+    /// <summary>Who is asking, and how far their reach extends.</summary>
+    private AccessScope Scope => AccessScope.From(User);
+
+    /// <summary>Drives what the page offers. The service is what enforces it.</summary>
+    public bool CanManage => Scope.CanManageOfficers;
+
+    /// <summary>A station administrator posts officers to their own station only.</summary>
+    public bool CanChooseBranch => Scope.SeesEveryBranch;
+
+    /// <summary>The caller's own station, used when they cannot choose one.</summary>
+    public string OwnBranchReference => Scope.BranchReferenceNumber;
+
+    public int OwnCompanyId { get; private set; }
 
     public async Task OnGetAsync() => await LoadAsync();
 
@@ -52,7 +63,7 @@ public class UsersModel(AppDbContext db, AuthService auth, OfficerService office
     /// <summary>GET /Users?handler=Officer&amp;id=5</summary>
     public async Task<IActionResult> OnGetOfficerAsync(int id)
     {
-        var officer = await officers.GetAsync(id);
+        var officer = await officers.GetAsync(id, Scope);
 
         return officer is null
             ? NotFound(new { error = "That officer no longer exists." })
@@ -71,7 +82,7 @@ public class UsersModel(AppDbContext db, AuthService auth, OfficerService office
             return BadRequest(new { error = "Name and email are both required." });
         }
 
-        var result = await officers.UpdateAsync(id, fullName, email, branchReferenceNumber);
+        var result = await officers.UpdateAsync(id, fullName, email, branchReferenceNumber, Scope);
 
         return result switch
         {
@@ -80,9 +91,10 @@ public class UsersModel(AppDbContext db, AuthService auth, OfficerService office
             OfficerUpdateResult.Success => new JsonResult(new
             {
                 message = $"{fullName.Trim()} updated.",
-                officer = await officers.GetAsync(id)
+                officer = await officers.GetAsync(id, Scope)
             }),
             OfficerUpdateResult.NotFound => NotFound(new { error = "That officer no longer exists." }),
+            OfficerUpdateResult.Forbidden => Forbidden("You cannot change officers."),
             // PageModel has no Conflict() helper, so the 409 is set explicitly.
             OfficerUpdateResult.DuplicateEmail => new JsonResult(
                 new { error = "Another officer already uses that email address." }) { StatusCode = 409 },
@@ -93,12 +105,13 @@ public class UsersModel(AppDbContext db, AuthService auth, OfficerService office
     /// <summary>POST /Users?handler=Delete</summary>
     public async Task<IActionResult> OnPostDeleteAsync([FromForm] int id)
     {
-        var result = await officers.DeleteAsync(id, CurrentUserId);
+        var result = await officers.DeleteAsync(id, Scope);
 
         return result switch
         {
             OfficerDeleteResult.Success => new JsonResult(new { message = "Officer removed." }),
             OfficerDeleteResult.NotFound => NotFound(new { error = "That officer no longer exists." }),
+            OfficerDeleteResult.Forbidden => Forbidden("You cannot remove officers."),
             _ => BadRequest(new { error = "You cannot remove your own account." })
         };
     }
@@ -115,8 +128,16 @@ public class UsersModel(AppDbContext db, AuthService auth, OfficerService office
             return Page();
         }
 
+        if (!Scope.CanManageOfficers)
+        {
+            return Rejected("You cannot add officers.");
+        }
+
+        // A station administrator's officers land at their own station,
+        // whatever the submitted form claimed.
         var result = await auth.RegisterAsync(
-            Input.FullName, Input.ForceNumber, Input.Email, Input.Password, Input.BranchReferenceNumber);
+            Input.FullName, Input.ForceNumber, Input.Email, Input.Password,
+            Scope.ResolveBranch(Input.BranchReferenceNumber));
 
         switch (result)
         {
@@ -148,9 +169,18 @@ public class UsersModel(AppDbContext db, AuthService auth, OfficerService office
         return Page();
     }
 
+    /// <summary>PageModel has no Forbid-with-body helper, so 403 is built here.</summary>
+    private static JsonResult Forbidden(string error) =>
+        new(new { error }) { StatusCode = 403 };
+
     private async Task LoadAsync()
     {
-        Officers = await officers.ListAsync();
+        Officers = await officers.ListAsync(Scope);
+
+        OwnCompanyId = await db.Branches
+            .Where(b => b.ReferenceNumber == Scope.BranchReferenceNumber)
+            .Select(b => b.CompanyId)
+            .FirstOrDefaultAsync();
 
         Companies = await db.Companies
             .OrderBy(c => c.Name)

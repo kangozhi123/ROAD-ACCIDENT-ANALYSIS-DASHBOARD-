@@ -10,5 +10,11 @@ public class User
 
     public string BranchReferenceNumber { get; set; } = string.Empty;
     public Branch? Branch { get; set; }
+
+    /// <summary>
+    /// Defaults to the narrowest role, so an account created by any route
+    /// starts able to see only its own station.
+    /// </summary>
+    public UserRole Role { get; set; } = UserRole.Officer;
     public DateTime CreatedAt { get; set; }
 }

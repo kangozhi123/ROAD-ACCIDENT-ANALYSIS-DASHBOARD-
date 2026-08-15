@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using RoadSafety.Web.Models;
 using RoadSafety.Web.Services;
 
 namespace RoadSafety.Web.Database;
@@ -22,17 +23,31 @@ public static class SeedData
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await db.Database.MigrateAsync();
 
-        if (await db.Users.AnyAsync(u => u.ForceNumber == "ZP-00001"))
+        var seeded = await db.Users.SingleOrDefaultAsync(u => u.ForceNumber == "ZP-00001");
+
+        if (seeded is not null)
         {
+            // A database created before roles existed has the demo account as a
+            // plain officer, which would leave nobody able to manage anything.
+            if (seeded.Role != UserRole.SystemAdministrator)
+            {
+                seeded.Role = UserRole.SystemAdministrator;
+                await db.SaveChangesAsync();
+            }
+
             return;
         }
 
         var auth = scope.ServiceProvider.GetRequiredService<AuthService>();
+
+        // The seeded account is a system administrator: without one, a fresh
+        // database would have nobody able to create the first station admin.
         await auth.RegisterAsync(
-            "Test Officer",
-            "ZP-00001",
-            "test.officer@police.gov.zm",
-            "Password123!",
-            "BR-001");
+        "Test Officer",
+        "ZP-00001",
+        "test.officer@police.gov.zm",
+        "Password123!",
+        "BR-001",
+        UserRole.SystemAdministrator);
     }
 }

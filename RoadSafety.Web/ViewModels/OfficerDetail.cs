@@ -1,3 +1,5 @@
+using RoadSafety.Web.Models;
+
 namespace RoadSafety.Web.ViewModels;
 
 /// <summary>
@@ -5,12 +7,13 @@ namespace RoadSafety.Web.ViewModels;
 /// view and edit dialogs.
 /// </summary>
 public record OfficerDetail(
-int Id,
-string FullName,
-string ForceNumber,
-string Email,
-string BranchReferenceNumber,
-string BranchName,
-int CompanyId,
-string CompanyName,
-DateTime CreatedAt);
+    int Id,
+    string FullName,
+    string ForceNumber,
+    string Email,
+    string BranchReferenceNumber,
+    string BranchName,
+    int CompanyId,
+    string CompanyName,
+    UserRole Role,
+    DateTime CreatedAt);

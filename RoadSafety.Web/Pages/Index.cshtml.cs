@@ -49,6 +49,7 @@ public class IndexModel : PageModel
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Name, user.FullName),
             new("ForceNumber", user.ForceNumber),
+            new(ClaimTypes.Role, user.Role.ToString()),
             new("BranchReferenceNumber", user.BranchReferenceNumber),
             new("BranchName", user.Branch?.Name ?? string.Empty),
             new("CompanyName", user.Branch?.Company?.Name ?? string.Empty)

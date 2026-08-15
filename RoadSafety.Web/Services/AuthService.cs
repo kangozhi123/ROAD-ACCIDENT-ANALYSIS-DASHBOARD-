@@ -29,7 +29,8 @@ public class AuthService
     string forceNumber, 
     string email, 
     string password, 
-    string branchReferenceNumber)
+    string branchReferenceNumber,
+    UserRole role = UserRole.Officer)
     {
         forceNumber = forceNumber.Trim();
         email = email.Trim();
@@ -56,6 +57,7 @@ public class AuthService
             ForceNumber = forceNumber,
             Email = email,
             BranchReferenceNumber = branchReferenceNumber,
+            Role = role,
             CreatedAt = DateTime.UtcNow
         };
 

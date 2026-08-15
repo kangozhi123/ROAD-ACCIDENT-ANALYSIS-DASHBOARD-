@@ -47,6 +47,10 @@ public class AppDbContext : DbContext
             entity.Property(u => u.PasswordHash).IsRequired();
             entity.Property(u => u.BranchReferenceNumber).IsRequired().HasMaxLength(50);
 
+            // Stored as text so the column reads plainly in the database and
+            // renumbering the enum cannot silently repoint existing rows.
+            entity.Property(u => u.Role).IsRequired().HasMaxLength(30).HasConversion<string>();
+
             entity.HasIndex(u => u.ForceNumber).IsUnique();
             entity.HasIndex(u => u.Email).IsUnique();
 
