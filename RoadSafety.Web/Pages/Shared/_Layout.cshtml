@@ -103,17 +103,42 @@
             <small>@User.FindFirst("BranchName")?.Value · @User.FindFirst("CompanyName")?.Value</small>
         </div>
 
+        <form class="topbar__search" method="get" asp-page="/Dashboard" role="search">
+            <label class="visually-hidden" for="topSearch">Search officers and stations</label>
+            <input type="search" id="topSearch" name="q" value="@Context.Request.Query["q"]"
+                   placeholder="Search officers or stations" autocomplete="off" />
+            <button type="submit" aria-label="Search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+                </svg>
+            </button>
+        </form>
+
         <div class="topbar__right">
-            <div class="avatar__meta">
-                <strong>@fullName</strong>
-                <span>@User.FindFirst("ForceNumber")?.Value</span>
+            <div class="dropdown">
+                <button class="account" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="avatar" aria-hidden="true">@initials</span>
+                    <span class="account__meta">
+                        <strong>@fullName</strong>
+                        <span>@User.FindFirst("ForceNumber")?.Value</span>
+                    </span>
+                    <svg class="account__caret" viewBox="0 0 12 8" aria-hidden="true">
+                        <path fill="currentColor" d="M1.4 0 6 4.6 10.6 0 12 1.4 6 7.4 0 1.4z" />
+                    </svg>
+                </button>
+
+                <div class="dropdown-menu dropdown-menu-end account-menu">
+                    <div class="account-menu__head">
+                        <strong>@fullName</strong>
+                        <span>@User.FindFirst("BranchName")?.Value</span>
+                        <span>@User.FindFirst("CompanyName")?.Value</span>
+                    </div>
+
+                    <form method="post" asp-page="/Logout" id="signOutForm">
+                        <button type="submit" class="dropdown-item">Sign out</button>
+                    </form>
+                </div>
             </div>
-
-            <div class="avatar" aria-hidden="true">@initials</div>
-
-            <form method="post" asp-page="/Logout" id="signOutForm">
-                <button type="submit" class="btn-ghost-brand">Sign out</button>
-            </form>
         </div>
     </header>
 

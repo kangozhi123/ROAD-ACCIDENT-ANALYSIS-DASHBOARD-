@@ -551,7 +551,7 @@ html.nav-collapsed .nav-item.is-active {
 .topbar {
     background: var(--surface);
     border-radius: 999px;
-    padding: .7rem .8rem .7rem 1rem;
+    padding: .6rem .7rem .6rem .8rem;
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -563,6 +563,7 @@ html.nav-collapsed .nav-item.is-active {
     font-size: .93rem;
     font-weight: 600;
     line-height: 1.25;
+    white-space: nowrap;
 }
 
 .topbar__greeting small {
@@ -572,6 +573,72 @@ html.nav-collapsed .nav-item.is-active {
     color: var(--slate);
 }
 
+/* Search: a single pill with the action fused to its right edge. */
+.topbar__search {
+    flex: 1 1 auto;
+    max-width: 420px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px 3px 3px .95rem;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.topbar__search:focus-within {
+    border-color: var(--azure);
+    box-shadow: 0 0 0 4px rgba(36, 120, 232, .14);
+}
+
+.topbar__search input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: .85rem;
+    color: var(--ink);
+    padding: .35rem 0;
+}
+
+.topbar__search input:focus {
+    outline: none;
+}
+
+.topbar__search input::placeholder {
+    color: var(--slate);
+}
+
+.topbar__search input::-webkit-search-cancel-button {
+    cursor: pointer;
+}
+
+.topbar__search button {
+    appearance: none;
+    border: 0;
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: var(--azure);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: background .18s ease;
+}
+
+.topbar__search button:hover {
+    background: var(--indigo);
+}
+
+.topbar__search button svg {
+    width: 16px;
+    height: 16px;
+}
+
 .topbar__right {
     display: flex;
     align-items: center;
@@ -579,31 +646,121 @@ html.nav-collapsed .nav-item.is-active {
     margin-left: auto;
 }
 
+/* Account menu ---------------------------------------------------------- */
+
+.account {
+    appearance: none;
+    border: 0;
+    background: none;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .2rem .5rem .2rem .2rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background .18s ease;
+}
+
+.account:hover {
+    background: var(--field);
+}
+
+.account__meta {
+    text-align: left;
+    line-height: 1.25;
+}
+
+.account__meta strong {
+    display: block;
+    font-size: .84rem;
+    color: var(--ink);
+}
+
+.account__meta span {
+    font-size: .72rem;
+    color: var(--slate);
+}
+
+.account__caret {
+    width: 10px;
+    height: 7px;
+    color: var(--slate);
+    flex: none;
+}
+
+.account-menu {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow-card);
+    padding: 0;
+    min-width: 15rem;
+    overflow: hidden;
+}
+
+.account-menu__head {
+    padding: .9rem 1rem;
+    border-bottom: 1px solid var(--line);
+    background: var(--field);
+    line-height: 1.4;
+}
+
+.account-menu__head strong {
+    display: block;
+    font-size: .88rem;
+}
+
+.account-menu__head span {
+    display: block;
+    font-size: .74rem;
+    color: var(--slate);
+}
+
+.account-menu .dropdown-item {
+    padding: .7rem 1rem;
+    font-size: .86rem;
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.account-menu .dropdown-item:hover {
+    background: var(--field);
+    color: var(--azure);
+}
+
 .avatar {
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     display: grid;
     place-items: center;
     background: var(--brand-gradient);
     color: #fff;
-    font-size: .82rem;
+    font-size: .8rem;
     font-weight: 700;
     flex: none;
 }
 
-.avatar__meta {
-    text-align: right;
-    line-height: 1.25;
+/* Search summary on the results page ------------------------------------ */
+
+.search-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .75rem;
+    background: var(--surface);
+    border-radius: 14px;
+    padding: .9rem 1.2rem;
+    margin-bottom: 1.4rem;
+    box-shadow: var(--shadow-soft);
+    font-size: .87rem;
 }
 
-.avatar__meta strong {
-    display: block;
-    font-size: .84rem;
+.search-summary b {
+    color: var(--ink);
 }
 
-.avatar__meta span {
-    font-size: .72rem;
+.search-summary span {
     color: var(--slate);
 }
 
@@ -891,19 +1048,39 @@ html.nav-collapsed .nav-item.is-active {
     }
 }
 
+/* The greeting duplicates the page heading; the search matters more than
+   both once the bar starts to crowd. */
+@media (max-width: 1100px) {
+    .topbar__greeting {
+        display: none;
+    }
+}
+
 @media (max-width: 620px) {
     .stat-row {
         grid-template-columns: minmax(0, 1fr);
         gap: .8rem;
     }
 
-    .avatar__meta {
+    .account__meta,
+    .account__caret {
         display: none;
+    }
+
+    .account {
+        padding: .2rem;
     }
 
     .topbar {
         border-radius: 18px;
-        padding: .7rem;
+        padding: .6rem;
+        gap: .6rem;
+    }
+
+    .topbar__search {
+        max-width: none;
+        margin: 0;
+        padding-left: .8rem;
     }
 
     .card {
