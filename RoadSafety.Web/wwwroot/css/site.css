@@ -1778,3 +1778,16 @@ table.dataTable tbody tr:hover td {
     opacity: .7;
     cursor: default;
 }
+
+/* Incident map ---------------------------------------------------------- */
+
+.map-box {
+    height: 380px;
+    border-radius: var(--radius-field);
+    border: 1px solid var(--line);
+    overflow: hidden;
+}
+
+.leaflet-container {
+    font-family: var(--font-sans);
+}

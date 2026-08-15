@@ -12,6 +12,8 @@ public class AppDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<Branch> Branches => Set<Branch>();
     public DbSet<Company> Companies => Set<Company>();
+    public DbSet<Device> Devices => Set<Device>();
+    public DbSet<Incident> Incidents => Set<Incident>();
     public DbSet<Role> Roles => Set<Role>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -71,6 +73,44 @@ public class AppDbContext : DbContext
             entity.Property(r => r.Description).IsRequired().HasMaxLength(200);
 
             entity.HasIndex(r => r.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<Device>(entity =>
+        {
+            entity.Property(d => d.Name).IsRequired().HasMaxLength(80);
+            entity.Property(d => d.VehicleRegistration).HasMaxLength(20);
+            entity.Property(d => d.TokenHash).IsRequired().HasMaxLength(64);
+            entity.Property(d => d.BranchReferenceNumber).IsRequired().HasMaxLength(50);
+
+            // Looked up on every incident that arrives, so it is indexed.
+            entity.HasIndex(d => d.TokenHash).IsUnique();
+
+            entity.HasOne(d => d.Branch)
+                  .WithMany()
+                  .HasForeignKey(d => d.BranchReferenceNumber)
+                  .HasPrincipalKey(b => b.ReferenceNumber)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Incident>(entity =>
+        {
+            entity.Property(i => i.BranchReferenceNumber).IsRequired().HasMaxLength(50);
+            entity.Property(i => i.Notes).HasMaxLength(500);
+            entity.Property(i => i.Status).IsRequired().HasMaxLength(20).HasConversion<string>();
+
+            // The dashboard reads newest-first within a station.
+            entity.HasIndex(i => new { i.BranchReferenceNumber, i.OccurredAt });
+
+            entity.HasOne(i => i.Device)
+                  .WithMany(d => d.Incidents)
+                  .HasForeignKey(i => i.DeviceId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(i => i.Branch)
+                  .WithMany()
+                  .HasForeignKey(i => i.BranchReferenceNumber)
+                  .HasPrincipalKey(b => b.ReferenceNumber)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         SeedLookups(modelBuilder);

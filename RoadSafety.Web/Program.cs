@@ -17,6 +17,7 @@ builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<OfficerService>();
 builder.Services.AddScoped<NumberGenerator>();
+builder.Services.AddScoped<IncidentService>();
 builder.Services.AddScoped<RoleService>();
 
 // Lets fetch() send the antiforgery token in a header, so the row actions
@@ -67,5 +68,62 @@ app.UseAuthorization();
 app.MapStaticAssets();
 app.MapRazorPages()
    .WithStaticAssets();
+
+// ── Device intake ──────────────────────────────────────────────────────
+//
+// A minimal API rather than a Razor handler: devices have no cookie and no
+// antiforgery token, so they authenticate with a device token in a header.
+// Kept deliberately small — it validates, records, and answers.
+app.MapPost("/api/incidents", async (
+    HttpRequest request,
+    IncidentReading reading,
+    IncidentService incidents,
+    ILoggerFactory loggerFactory,
+    CancellationToken ct) =>
+{
+    var token = request.Headers["X-Device-Token"].FirstOrDefault();
+    var (result, id) = await incidents.RecordAsync(token, reading, ct);
+
+    var log = loggerFactory.CreateLogger("DeviceIntake");
+
+    switch (result)
+    {
+        case IncidentIntakeResult.Accepted:
+            log.LogInformation("Incident {Id} recorded at {Impact}g", id, reading.ImpactG);
+            return Results.Created($"/Incidents#{id}", new { id, status = "recorded" });
+
+        case IncidentIntakeResult.DeviceDisabled:
+            return Results.Json(new { error = "This device has been deactivated." }, statusCode: 403);
+
+        case IncidentIntakeResult.Invalid:
+            return Results.BadRequest(new { error = "impactG must be greater than zero." });
+
+        default:
+            // Same answer whether the token is wrong or absent, so the endpoint
+            // cannot be used to test tokens for validity.
+            log.LogWarning("Rejected an incident from an unrecognised device token");
+            return Results.Json(new { error = "Unrecognised device." }, statusCode: 401);
+    }
+});
+
+// Lets a unit confirm it can reach the server and that its token is accepted,
+// without inventing a crash to do it.
+app.MapGet("/api/devices/me", async (
+    HttpRequest request, IncidentService incidents, CancellationToken ct) =>
+{
+    var device = await incidents.FindDeviceAsync(
+        request.Headers["X-Device-Token"].FirstOrDefault(), ct);
+
+    return device is null
+        ? Results.Json(new { error = "Unrecognised device." }, statusCode: 401)
+        : Results.Ok(new
+        {
+            device.Name,
+            device.VehicleRegistration,
+            station = device.BranchReferenceNumber,
+            device.IsActive,
+            serverTime = DateTime.UtcNow
+        });
+});
 
 app.Run();

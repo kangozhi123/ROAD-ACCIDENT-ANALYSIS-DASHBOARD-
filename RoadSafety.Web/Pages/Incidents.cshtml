@@ -1,0 +1,207 @@
+@page
+@model RoadSafety.Web.Pages.IncidentsModel
+@using RoadSafety.Web.Models
+@using RoadSafety.Web.ViewModels
+@{
+    ViewData["Title"] = "Incidents";
+}
+
+@section Styles {
+    <partial name="_LibStyles" />
+    <link rel="stylesheet" href="~/lib/leaflet/leaflet.css" />
+}
+
+<partial name="_PageHeader" model="@(new PageHeader(
+    "Incidents",
+    Model.SeesEveryBranch
+        ? $"{Model.Incidents.Count} reported by vehicle units across all stations"
+        : $"{Model.Incidents.Count} reported at {User.FindFirst("BranchName")?.Value}",
+    new[] { new Crumb("Dashboard", "/Dashboard"), new Crumb("Incidents") }))" />
+
+@if (Model.Incidents.Count == 0)
+{
+    <section class="card">
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 9v4M12 17h.01" />
+                <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+            </svg>
+
+            <h3>Nothing reported yet</h3>
+            <p>
+                Incidents appear here the moment a vehicle unit detects an impact.
+                Nothing on this page is sample data — if it is empty, no unit has
+                reported anything.
+            </p>
+        </div>
+    </section>
+}
+else
+{
+    <div class="stat-row">
+        <article class="stat" style="--accent:var(--fill-amber);">
+            <div class="stat__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 9v4M12 17h.01" />
+                    <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+                </svg>
+            </div>
+            <div>
+                <div class="stat__label">Awaiting review</div>
+                <div class="stat__value">@Model.ReportedCount</div>
+                <div class="stat__note">Suspected, not confirmed</div>
+            </div>
+        </article>
+
+        <article class="stat" style="--accent:var(--fill-azure);">
+            <div class="stat__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" />
+                </svg>
+            </div>
+            <div>
+                <div class="stat__label">With a location</div>
+                <div class="stat__value">@Model.Located.Count</div>
+                <div class="stat__note">of @Model.Incidents.Count reported</div>
+            </div>
+        </article>
+
+        <article class="stat" style="--accent:var(--fill-indigo);">
+            <div class="stat__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 12h4l3 8 4-16 3 8h4" />
+                </svg>
+            </div>
+            <div>
+                <div class="stat__label">Heaviest impact</div>
+                <div class="stat__value">@Model.Incidents.Max(i => i.ImpactG).ToString("0.0")g</div>
+                <div class="stat__note">Peak force recorded</div>
+            </div>
+        </article>
+    </div>
+
+    @if (Model.Located.Count > 0)
+    {
+        <section class="card" style="margin-bottom:1.25rem;">
+            <div class="card__head">
+                <h2 class="card__title">Where they happened</h2>
+                <span class="card__hint">@Model.Located.Count with a GPS fix</span>
+            </div>
+            <div id="incidentMap" class="map-box"></div>
+        </section>
+    }
+
+    <section class="card">
+        <div class="card__head">
+            <h2 class="card__title">Reports</h2>
+            <span class="card__hint">Newest first</span>
+        </div>
+
+        <table id="incidentsTable" class="table" style="width:100%">
+            <thead>
+                <tr>
+                    <th>When</th>
+                    <th>Unit</th>
+                    <th>Station</th>
+                    <th>Impact</th>
+                    <th>Speed</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var incident in Model.Incidents)
+                {
+                    <tr>
+                        <td data-order="@incident.OccurredAt.ToString("s")">
+                            @incident.OccurredAt.ToString("d MMM HH:mm")
+                        </td>
+                        <td>
+                            <div class="people__name">@incident.DeviceName</div>
+                            @if (!string.IsNullOrWhiteSpace(incident.VehicleRegistration))
+                            {
+                                <div class="people__meta">@incident.VehicleRegistration</div>
+                            }
+                        </td>
+                        <td>@incident.BranchName</td>
+                        <td data-order="@incident.ImpactG">
+                            <b>@incident.ImpactG.ToString("0.0")g</b>
+                        </td>
+                        <td>
+                            @(incident.SpeedKph.HasValue ? $"{incident.SpeedKph.Value:0} km/h" : "—")
+                        </td>
+                        <td>
+                            @if (incident.Latitude.HasValue)
+                            {
+                                <span class="people__meta">
+                                    @incident.Latitude.Value.ToString("0.0000"),
+                                    @incident.Longitude!.Value.ToString("0.0000")
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="cell-note">No fix</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="role-tag">@RoadSafety.Web.Pages.IncidentsModel.StatusLabel(incident.Status)</span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </section>
+}
+
+@section Scripts {
+    <partial name="_LibScripts" />
+
+    @if (Model.Incidents.Count > 0)
+    {
+        <script src="~/lib/leaflet/leaflet.js"></script>
+        <script id="incidentData" type="application/json">
+            @Html.Raw(Json.Serialize(Model.Located.Select(i => new {
+                lat = i.Latitude, lng = i.Longitude, unit = i.DeviceName,
+                impact = i.ImpactG, when = i.OccurredAt.ToString("d MMM HH:mm")
+            })))
+        </script>
+        <script>
+            (function () {
+                new DataTable('#incidentsTable', { order: [[0, 'desc']] });
+
+                var points = JSON.parse(document.getElementById('incidentData').textContent);
+                var mapEl = document.getElementById('incidentMap');
+                if (!mapEl || points.length === 0) return;
+
+                var map = L.map('incidentMap');
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors',
+                    maxZoom: 19
+                }).addTo(map);
+
+                var bounds = [];
+
+                points.forEach(function (p) {
+                    // Heavier impacts read as larger circles, so the map shows
+                    // severity rather than only position.
+                    var radius = Math.min(24, 8 + p.impact * 2);
+
+                    L.circleMarker([p.lat, p.lng], {
+                        radius: radius,
+                        color: '#fff',
+                        weight: 2,
+                        fillColor: p.impact >= 5 ? '#D64550' : '#E8A32A',
+                        fillOpacity: 0.9
+                    })
+                        .addTo(map)
+                        .bindPopup('<b>' + p.unit + '</b><br>' + p.when + '<br>' + p.impact.toFixed(1) + 'g');
+
+                    bounds.push([p.lat, p.lng]);
+                });
+
+                map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+            })();
+        </script>
+    }
+}

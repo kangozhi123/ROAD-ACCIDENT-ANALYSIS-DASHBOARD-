@@ -35,6 +35,7 @@ public static class SeedData
                 await db.SaveChangesAsync();
             }
 
+            await EnsureDemoDeviceAsync(db);
             return;
         }
 
@@ -49,5 +50,36 @@ public static class SeedData
         "Password123!",
         "BR-001",
         Role.SystemAdministratorId);
+
+        await EnsureDemoDeviceAsync(db);
+    }
+
+    /// <summary>
+    /// A known development token so the ESP32 sketch works straight out of the
+    /// repository. A deployed unit would be registered through the dashboard
+    /// with a generated token shown once and never stored in plain text.
+    /// </summary>
+    public const string DemoDeviceToken = "ZP-DEMO-DEVICE-0001";
+
+    private static async Task EnsureDemoDeviceAsync(AppDbContext db)
+    {
+        var hash = IncidentService.HashToken(DemoDeviceToken);
+
+        if (await db.Devices.AnyAsync(d => d.TokenHash == hash))
+        {
+            return;
+        }
+
+        db.Devices.Add(new Device
+        {
+            Name = "Patrol Unit Alpha",
+            VehicleRegistration = "ALH 1234 ZM",
+            TokenHash = hash,
+            BranchReferenceNumber = "BR-001",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        await db.SaveChangesAsync();
     }
 }
