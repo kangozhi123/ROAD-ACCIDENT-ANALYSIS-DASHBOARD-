@@ -1,18 +1,24 @@
 @page
 @model RoadSafety.Web.Pages.DashboardModel
+@using RoadSafety.Web.ViewModels
 @{
     ViewData["Title"] = Model.IsSearching ? "Search" : "Dashboard";
 }
 
 @if (Model.IsSearching)
 {
-    <div class="search-summary">
-        <div>
-            <b>@(Model.Officers.Count + Model.Stations.Count) results</b>
-            <span>for &ldquo;@Model.Query&rdquo;</span>
-        </div>
-        <a class="link-muted" asp-page="/Dashboard"><b>Clear search</b></a>
-    </div>
+    <partial name="_PageHeader" model="@(new PageHeader(
+        "Search results",
+        $"{Model.Officers.Count + Model.Stations.Count} matches for “{Model.Query}”",
+        new[] { new Crumb("Dashboard", "/Dashboard"), new Crumb("Search") },
+        ActionText: "Clear search",
+        ActionPage: "/Dashboard"))" />
+}
+else
+{
+    <partial name="_PageHeader" model="@(new PageHeader(
+        $"Welcome, {Model.OfficerName}",
+        $"{Model.BranchName} · {Model.CompanyName}"))" />
 }
 
 <section class="stat-row">

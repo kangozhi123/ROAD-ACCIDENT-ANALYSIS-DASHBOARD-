@@ -1,0 +1,40 @@
+@model RoadSafety.Web.ViewModels.PageHeader
+@*
+    The single page header. Usage:
+
+        <partial name="_PageHeader" model="@(new PageHeader(
+            "Officers",
+            $"{Model.Officers.Count} registered",
+            new[] { new Crumb("Dashboard", "/Dashboard"), new Crumb("Officers") },
+            ActionText: "Add officer",
+            ActionModalTarget: "#addOfficer"))" />
+*@
+@if (Model.Crumbs is { Count: > 0 })
+{
+    <partial name="_Breadcrumb" model="Model.Crumbs" />
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-head__title">@Model.Title</h1>
+        @if (!string.IsNullOrWhiteSpace(Model.Subtitle))
+        {
+            <p class="page-head__sub">@Model.Subtitle</p>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.ActionText))
+    {
+        if (Model.ActionModalTarget is not null)
+        {
+            <button type="button" class="btn-primary-brand"
+                    data-bs-toggle="modal" data-bs-target="@Model.ActionModalTarget">
+                @Model.ActionText
+            </button>
+        }
+        else if (Model.ActionPage is not null)
+        {
+            <a class="btn-primary-brand" asp-page="@Model.ActionPage">@Model.ActionText</a>
+        }
+    }
+</div>

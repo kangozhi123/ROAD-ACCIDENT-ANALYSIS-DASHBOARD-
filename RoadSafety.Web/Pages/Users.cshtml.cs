@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +11,7 @@ using RoadSafety.Web.ViewModels;
 namespace RoadSafety.Web.Pages;
 
 [Authorize]
-public class UsersModel(AppDbContext db, AuthService auth) : PageModel
+public class UsersModel(AppDbContext db, AuthService auth, OfficerService officers) : PageModel
 {
     public List<OfficerRow> Officers { get; private set; } = [];
     public List<CompanyOption> Companies { get; private set; } = [];
@@ -27,7 +28,62 @@ public class UsersModel(AppDbContext db, AuthService auth) : PageModel
     /// </summary>
     public bool ReopenDialog { get; private set; }
 
+    private int CurrentUserId =>
+        int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
+
     public async Task OnGetAsync() => await LoadAsync();
+
+    // ── Endpoints ──────────────────────────────────────────────────────
+
+    /// <summary>GET /Users?handler=Officer&amp;id=5</summary>
+    public async Task<IActionResult> OnGetOfficerAsync(int id)
+    {
+        var officer = await officers.GetAsync(id);
+
+        return officer is null
+            ? NotFound(new { error = "That officer no longer exists." })
+            : new JsonResult(officer);
+    }
+
+    /// <summary>POST /Users?handler=Update</summary>
+    public async Task<IActionResult> OnPostUpdateAsync(
+        [FromForm] int id,
+        [FromForm] string fullName,
+        [FromForm] string email,
+        [FromForm] string branchReferenceNumber)
+    {
+        if (string.IsNullOrWhiteSpace(fullName) || string.IsNullOrWhiteSpace(email))
+        {
+            return BadRequest(new { error = "Name and email are both required." });
+        }
+
+        var result = await officers.UpdateAsync(id, fullName, email, branchReferenceNumber);
+
+        return result switch
+        {
+            OfficerUpdateResult.Success => new JsonResult(new { message = $"{fullName.Trim()} updated." }),
+            OfficerUpdateResult.NotFound => NotFound(new { error = "That officer no longer exists." }),
+            // PageModel has no Conflict() helper, so the 409 is set explicitly.
+            OfficerUpdateResult.DuplicateEmail => new JsonResult(
+                new { error = "Another officer already uses that email address." }) { StatusCode = 409 },
+            _ => BadRequest(new { error = "That station was not recognised." })
+        };
+    }
+
+    /// <summary>POST /Users?handler=Delete</summary>
+    public async Task<IActionResult> OnPostDeleteAsync([FromForm] int id)
+    {
+        var result = await officers.DeleteAsync(id, CurrentUserId);
+
+        return result switch
+        {
+            OfficerDeleteResult.Success => new JsonResult(new { message = "Officer removed." }),
+            OfficerDeleteResult.NotFound => NotFound(new { error = "That officer no longer exists." }),
+            _ => BadRequest(new { error = "You cannot remove your own account." })
+        };
+    }
+
+    // ── Add officer ────────────────────────────────────────────────────
 
     public async Task<IActionResult> OnPostAsync()
     {
@@ -67,17 +123,7 @@ public class UsersModel(AppDbContext db, AuthService auth) : PageModel
 
     private async Task LoadAsync()
     {
-        Officers = await db.Users
-            .Include(u => u.Branch)!.ThenInclude(b => b!.Company)
-            .OrderByDescending(u => u.CreatedAt)
-            .Select(u => new OfficerRow(
-                u.FullName,
-                u.ForceNumber,
-                u.Email,
-                u.Branch!.Name,
-                u.Branch!.Company!.Name,
-                u.CreatedAt))
-            .ToListAsync();
+        Officers = await officers.ListAsync();
 
         Companies = await db.Companies
             .OrderBy(c => c.Name)

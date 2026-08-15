@@ -1482,3 +1482,97 @@ table.dataTable tbody tr:hover td {
         width: 100%;
     }
 }
+
+/* ==========================================================================
+   Centred page column, row actions and detail lists
+   ========================================================================== */
+
+.page {
+    max-width: 1320px;
+    margin: 0 auto;
+}
+
+/* Row actions ----------------------------------------------------------- */
+
+.col-actions {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+}
+
+.row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: .35rem;
+}
+
+.icon-btn {
+    appearance: none;
+    width: 32px;
+    height: 32px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--slate);
+    cursor: pointer;
+    transition: border-color .16s ease, color .16s ease, background .16s ease;
+}
+
+.icon-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.icon-btn:hover {
+    border-color: var(--azure);
+    color: var(--azure);
+    background: var(--field);
+}
+
+.icon-btn--danger:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+    background: var(--danger-soft);
+}
+
+/* Detail list, used by the view dialog ---------------------------------- */
+
+.detail-list {
+    display: grid;
+    grid-template-columns: minmax(0, 9rem) 1fr;
+    gap: .8rem 1.25rem;
+    margin: 0;
+    font-size: .9rem;
+}
+
+.detail-list dt {
+    color: var(--slate);
+    font-size: .78rem;
+    font-weight: 600;
+    align-self: center;
+}
+
+.detail-list dd {
+    margin: 0;
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.modal-footer {
+    gap: .6rem;
+}
+
+@media (max-width: 620px) {
+    .detail-list {
+        grid-template-columns: 1fr;
+        gap: .2rem;
+    }
+
+    .detail-list dd {
+        margin-bottom: .7rem;
+    }
+}
