@@ -4,14 +4,13 @@
    ========================================================================== */
 
 :root {
-    /* Brand ------------------------------------------------------------- */
+    /* Brand */
     --indigo: #3A3FDF;
     --azure: #2478E8;
     --cyan: #12C7EE;
-
     --brand-gradient: linear-gradient(135deg, var(--indigo) 0%, var(--azure) 48%, var(--cyan) 100%);
 
-    /* Neutrals ---------------------------------------------------------- */
+    /* Neutrals */
     --ink: #17203A;
     --slate: #7C8AA0;
     --line: #E2E9F2;
@@ -19,24 +18,26 @@
     --surface: #FFFFFF;
     --canvas: #EEF3F9;
 
-    /* Feedback ---------------------------------------------------------- */
+    /* Feedback */
     --danger: #D64550;
     --danger-soft: #FDECEE;
-    --success: #16A97A;
+    --warning: #E8A32A;
 
-    /* Type -------------------------------------------------------------- */
     --font-sans: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system,
                  "Helvetica Neue", Arial, sans-serif;
 
-    /* Elevation --------------------------------------------------------- */
     --shadow-card: 0 24px 60px -20px rgba(23, 32, 58, .28);
     --shadow-btn: 0 8px 20px -6px rgba(36, 120, 232, .55);
+    --shadow-soft: 0 12px 34px -28px rgba(23, 32, 58, .6);
 
     --radius-card: 26px;
     --radius-field: 10px;
+
+    /* Sidebar width, swapped by the collapse toggle. */
+    --rail: 250px;
 }
 
-/* Base ---------------------------------------------------------------- */
+/* Base ------------------------------------------------------------------ */
 
 html {
     font-size: 16px;
@@ -89,8 +90,6 @@ img {
     min-height: 560px;
 }
 
-/* Left: the gradient panel ------------------------------------------- */
-
 .auth-aside {
     background: var(--brand-gradient);
     color: #fff;
@@ -101,7 +100,6 @@ img {
     justify-content: center;
     text-align: center;
     gap: 1.25rem;
-    position: relative;
 }
 
 .auth-aside__mark {
@@ -143,22 +141,16 @@ img {
     color: var(--indigo);
 }
 
-/* Right: the form panel, with the signature curved edge --------------- */
-
 .auth-main {
     background: var(--surface);
-    padding: 2.75rem 3rem 3rem;
-    position: relative;
-    /* The curve that bites into the gradient panel. */
+    padding: 2.75rem 3rem 3rem 5rem;
     margin-left: -56px;
     border-top-left-radius: 56% 46%;
     border-bottom-left-radius: 56% 46%;
-    padding-left: 5rem;
 }
 
 .auth-main__head {
     display: flex;
-    align-items: flex-start;
     justify-content: flex-end;
     margin-bottom: .5rem;
 }
@@ -178,7 +170,7 @@ img {
     margin: 0 0 1.75rem;
 }
 
-/* Segmented control — one segment per company ------------------------- */
+/* Segmented control — one segment per company */
 
 .segmented {
     display: inline-flex;
@@ -222,7 +214,7 @@ img {
     outline-offset: 2px;
 }
 
-/* Fields --------------------------------------------------------------- */
+/* Fields ---------------------------------------------------------------- */
 
 .field-grid {
     display: grid;
@@ -244,7 +236,6 @@ img {
     font-size: .78rem;
     font-weight: 600;
     color: var(--slate);
-    letter-spacing: .01em;
 }
 
 .field input,
@@ -281,23 +272,18 @@ img {
     box-shadow: 0 0 0 4px rgba(36, 120, 232, .14);
 }
 
-.field input:disabled,
-.field select:disabled {
-    opacity: .55;
-    cursor: not-allowed;
-}
-
 .field-error {
     font-size: .75rem;
     color: var(--danger);
     min-height: 1em;
 }
 
-/* Buttons -------------------------------------------------------------- */
+/* Buttons --------------------------------------------------------------- */
 
 .btn-primary-brand {
     appearance: none;
     border: 0;
+    display: inline-block;
     padding: .82rem 2.4rem;
     border-radius: 999px;
     background: var(--azure);
@@ -306,6 +292,7 @@ img {
     font-size: .95rem;
     font-weight: 600;
     cursor: pointer;
+    text-decoration: none;
     box-shadow: var(--shadow-btn);
     transition: transform .18s ease, background .18s ease;
 }
@@ -313,10 +300,27 @@ img {
 .btn-primary-brand:hover {
     background: var(--indigo);
     transform: translateY(-1px);
+    color: #fff;
 }
 
-.btn-primary-brand:active {
-    transform: translateY(0);
+.btn-ghost-brand {
+    appearance: none;
+    padding: .55rem 1.3rem;
+    border-radius: 999px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--slate);
+    font: inherit;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color .18s ease, color .18s ease;
+}
+
+.btn-ghost-brand:hover {
+    border-color: var(--azure);
+    color: var(--azure);
 }
 
 .form-actions {
@@ -345,8 +349,6 @@ img {
     text-decoration: underline;
 }
 
-/* Alerts --------------------------------------------------------------- */
-
 .alert-brand {
     background: var(--danger-soft);
     border: 1px solid rgba(214, 69, 80, .28);
@@ -357,81 +359,30 @@ img {
     margin-bottom: 1.1rem;
 }
 
-/* Responsive ----------------------------------------------------------- */
-
-@media (max-width: 860px) {
-    .auth-card {
-        grid-template-columns: 1fr;
-        min-height: 0;
-    }
-
-    .auth-aside {
-        padding: 2.5rem 1.75rem;
-    }
-
-    .auth-main {
-        margin-left: 0;
-        padding: 2rem 1.5rem 2.5rem;
-        border-radius: 0;
-    }
-
-    .field-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .auth-main__head {
-        justify-content: center;
-        margin-bottom: 1.25rem;
-    }
-
-    .form-actions {
-        flex-direction: column-reverse;
-        align-items: stretch;
-    }
-
-    .btn-primary-brand {
-        width: 100%;
-    }
-
-    .link-muted {
-        text-align: center;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    * {
-        transition: none !important;
-        animation: none !important;
-    }
-}
-
-
 /* ==========================================================================
-   Application shell — sidebar + top bar (signed-in pages)
+   Application shell — fixed sidebar flush to the viewport edge
    ========================================================================== */
 
-.shell {
-    display: grid;
-    grid-template-columns: 246px 1fr;
-    gap: 1.75rem;
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 1.5rem 1.75rem;
-    align-items: start;
-}
-
-/* Sidebar --------------------------------------------------------------- */
-
 .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: var(--rail);
     background: linear-gradient(180deg, var(--indigo) 0%, #2C3AC4 55%, #24309F 100%);
-    border-radius: var(--radius-card);
-    padding: 1.75rem 0 2rem;
-    position: sticky;
-    top: 1.5rem;
-    min-height: calc(100vh - 3rem);
+    padding: 1.6rem 0 1.5rem;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    z-index: 40;
+    overflow-x: hidden;
+    overflow-y: auto;
+    transition: width .22s ease, transform .22s ease;
+}
+
+.shell__main {
+    margin-left: var(--rail);
+    padding: 1.35rem 1.5rem 3rem;
+    transition: margin-left .22s ease;
+    min-height: 100vh;
+    box-sizing: border-box;
 }
 
 .sidebar__logo {
@@ -440,12 +391,12 @@ img {
     gap: .7rem;
     color: #fff;
     text-decoration: none;
-    padding: 0 1.5rem 2rem;
+    padding: 0 1.4rem 1.9rem;
 }
 
 .sidebar__logo svg {
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
     flex: none;
 }
 
@@ -465,20 +416,21 @@ img {
 .nav-item {
     display: flex;
     align-items: center;
-    gap: .8rem;
-    padding: .78rem 1.5rem;
-    margin-left: 1rem;
+    gap: .85rem;
+    padding: .78rem 1.4rem;
+    margin-left: .9rem;
     color: rgba(255, 255, 255, .74);
     text-decoration: none;
     font-size: .875rem;
     font-weight: 500;
     border-radius: 999px 0 0 999px;
+    white-space: nowrap;
     transition: color .18s ease, background .18s ease;
 }
 
 .nav-item svg {
-    width: 18px;
-    height: 18px;
+    width: 19px;
+    height: 19px;
     flex: none;
 }
 
@@ -487,26 +439,20 @@ img {
     background: rgba(255, 255, 255, .1);
 }
 
-/* The active page's pill runs to the sidebar edge and picks up the page
-   background, so the nav item reads as physically joined to the content. */
-.nav-item.is-active {
+/* The active pill runs to the sidebar edge and takes the page background,
+   so the nav item reads as physically joined to the content. */
+.nav-item.is-active,
+.nav-item.is-active:hover {
     background: var(--canvas);
     color: var(--indigo);
     font-weight: 600;
 }
 
-.nav-item.is-active:hover {
-    background: var(--canvas);
-}
-
-.nav-item.is-soon {
-    color: rgba(255, 255, 255, .42);
-    cursor: not-allowed;
-}
-
+.nav-item.is-soon,
 .nav-item.is-soon:hover {
-    background: transparent;
     color: rgba(255, 255, 255, .42);
+    background: transparent;
+    cursor: not-allowed;
 }
 
 .nav-item__tag {
@@ -523,10 +469,81 @@ img {
 
 .sidebar__foot {
     margin-top: auto;
-    padding: 1.5rem 1.5rem 0;
+    padding: 1.5rem 1.4rem 0;
     color: rgba(255, 255, 255, .55);
     font-size: .72rem;
     line-height: 1.5;
+    white-space: nowrap;
+}
+
+/* Collapsed: icons only ------------------------------------------------- */
+
+html.nav-collapsed {
+    --rail: 78px;
+}
+
+html.nav-collapsed .sidebar__logo {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+html.nav-collapsed .sidebar__logo span,
+html.nav-collapsed .nav-item__tag,
+html.nav-collapsed .sidebar__foot {
+    display: none;
+}
+
+html.nav-collapsed .nav-item {
+    justify-content: center;
+    margin-left: 0;
+    padding: .8rem 0;
+    border-radius: 0;
+    gap: 0;
+    /* Hide the label without losing it from the accessibility tree. */
+    font-size: 0;
+}
+
+html.nav-collapsed .nav-item.is-active {
+    background: rgba(255, 255, 255, .18);
+    color: #fff;
+}
+
+/* Toggle + scrim -------------------------------------------------------- */
+
+.nav-toggle {
+    appearance: none;
+    width: 38px;
+    height: 38px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--slate);
+    cursor: pointer;
+    transition: border-color .18s ease, color .18s ease;
+}
+
+.nav-toggle:hover {
+    border-color: var(--azure);
+    color: var(--azure);
+}
+
+.nav-toggle svg {
+    width: 18px;
+    height: 18px;
+}
+
+.nav-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(23, 32, 58, .45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .22s ease;
+    z-index: 35;
 }
 
 /* Top bar --------------------------------------------------------------- */
@@ -534,19 +551,18 @@ img {
 .topbar {
     background: var(--surface);
     border-radius: 999px;
-    padding: .7rem .8rem .7rem 1.6rem;
+    padding: .7rem .8rem .7rem 1rem;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 1.25rem;
+    gap: 1rem;
     box-shadow: 0 10px 30px -22px rgba(23, 32, 58, .55);
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.4rem;
 }
 
 .topbar__greeting {
     font-size: .93rem;
     font-weight: 600;
-    white-space: nowrap;
+    line-height: 1.25;
 }
 
 .topbar__greeting small {
@@ -560,6 +576,7 @@ img {
     display: flex;
     align-items: center;
     gap: .7rem;
+    margin-left: auto;
 }
 
 .avatar {
@@ -572,7 +589,6 @@ img {
     color: #fff;
     font-size: .82rem;
     font-weight: 700;
-    letter-spacing: .02em;
     flex: none;
 }
 
@@ -595,9 +611,9 @@ img {
 
 .stat-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1.1rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.4rem;
 }
 
 .stat {
@@ -607,7 +623,7 @@ img {
     display: flex;
     align-items: center;
     gap: 1rem;
-    box-shadow: 0 10px 30px -26px rgba(23, 32, 58, .6);
+    box-shadow: var(--shadow-soft);
     border-left: 4px solid var(--accent, var(--azure));
 }
 
@@ -635,7 +651,7 @@ img {
 }
 
 .stat__value {
-    font-size: 1.5rem;
+    font-size: 1.55rem;
     font-weight: 700;
     letter-spacing: -.02em;
     line-height: 1.1;
@@ -651,7 +667,7 @@ img {
 
 .card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
     gap: 1.25rem;
     align-items: start;
 }
@@ -660,7 +676,7 @@ img {
     background: var(--surface);
     border-radius: 16px;
     padding: 1.4rem 1.5rem 1.5rem;
-    box-shadow: 0 12px 34px -28px rgba(23, 32, 58, .6);
+    box-shadow: var(--shadow-soft);
 }
 
 .card__head {
@@ -734,49 +750,7 @@ img {
     white-space: nowrap;
 }
 
-/* Responsive ------------------------------------------------------------ */
-
-@media (max-width: 940px) {
-    .shell {
-        grid-template-columns: 1fr;
-        padding: 1rem;
-        gap: 1rem;
-    }
-
-    .sidebar {
-        position: static;
-        min-height: 0;
-        padding-bottom: 1rem;
-    }
-
-    .sidebar__nav {
-        flex-direction: row;
-        overflow-x: auto;
-        padding: 0 1rem .25rem;
-    }
-
-    .nav-item {
-        margin-left: 0;
-        border-radius: 999px;
-        white-space: nowrap;
-        padding: .6rem 1rem;
-    }
-
-    .nav-item__tag,
-    .sidebar__foot {
-        display: none;
-    }
-
-    .topbar {
-        border-radius: 18px;
-        padding: .9rem 1rem;
-        flex-wrap: wrap;
-    }
-}
-
-/* ==========================================================================
-   Empty states, message pages and secondary buttons
-   ========================================================================== */
+/* Empty states and message pages ---------------------------------------- */
 
 .empty-state {
     border: 1px dashed var(--line);
@@ -807,26 +781,6 @@ img {
     line-height: 1.6;
     margin: 0 auto;
     max-width: 46ch;
-}
-
-.btn-ghost-brand {
-    appearance: none;
-    padding: .55rem 1.3rem;
-    border-radius: 999px;
-    background: transparent;
-    border: 1px solid var(--line);
-    color: var(--slate);
-    font: inherit;
-    font-size: .82rem;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: border-color .18s ease, color .18s ease;
-}
-
-.btn-ghost-brand:hover {
-    border-color: var(--azure);
-    color: var(--azure);
 }
 
 .message-page {
@@ -868,43 +822,20 @@ img {
 }
 
 /* ==========================================================================
-   Filling the screen — width and breakpoints
+   Breakpoints
    ========================================================================== */
 
-.shell {
-    max-width: 1760px;
-    gap: 1.5rem;
-    padding: 1.5rem;
-}
-
-/* Analysis gets the wider column; the roster only needs a list width. */
-.card-grid {
-    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
-}
-
-/* Very wide: widen the rail and let four stat cards breathe. */
-@media (min-width: 1600px) {
-    .shell {
-        grid-template-columns: 280px 1fr;
-        gap: 2rem;
-        padding: 2rem;
-    }
-
-    .stat-row {
-        gap: 1.35rem;
+@media (min-width: 1700px) {
+    .shell__main {
+        padding: 1.75rem 2.25rem 3rem;
     }
 
     .stat__value {
-        font-size: 1.7rem;
+        font-size: 1.75rem;
     }
 }
 
-/* Laptop: stat cards drop to two across before they crowd. */
 @media (max-width: 1280px) {
-    .shell {
-        grid-template-columns: 220px 1fr;
-    }
-
     .stat-row {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -914,27 +845,53 @@ img {
     }
 }
 
-/* Tablet: sidebar becomes a horizontal strip above the content. */
+/* Tablet and below: the sidebar leaves the flow and slides over the page.
+   It starts closed, so the content gets the full width by default. */
 @media (max-width: 940px) {
-    .sidebar__logo {
-        padding-bottom: 1.25rem;
+    .sidebar {
+        transform: translateX(-100%);
+        box-shadow: 0 0 60px rgba(23, 32, 58, .35);
+        --rail: 250px;
+        width: 250px;
     }
 
-    .topbar__greeting {
-        white-space: normal;
+    .shell__main {
+        margin-left: 0;
+        padding: 1rem 1rem 2.5rem;
     }
 
-    .topbar__right {
-        margin-left: auto;
+    html.nav-open .sidebar {
+        transform: translateX(0);
+    }
+
+    html.nav-open .nav-scrim {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Collapsing is a desktop affordance; on a drawer it makes no sense. */
+    html.nav-collapsed .sidebar__logo span,
+    html.nav-collapsed .nav-item__tag,
+    html.nav-collapsed .sidebar__foot {
+        display: revert;
+    }
+
+    html.nav-collapsed .nav-item {
+        justify-content: flex-start;
+        margin-left: .9rem;
+        padding: .78rem 1.4rem;
+        border-radius: 999px 0 0 999px;
+        gap: .85rem;
+        font-size: .875rem;
+    }
+
+    html.nav-collapsed .sidebar__logo {
+        justify-content: flex-start;
+        padding-left: 1.4rem;
     }
 }
 
-/* Phone: one column throughout, identity text drops off the bar. */
 @media (max-width: 620px) {
-    .shell {
-        padding: .75rem;
-    }
-
     .stat-row {
         grid-template-columns: minmax(0, 1fr);
         gap: .8rem;
@@ -942,6 +899,11 @@ img {
 
     .avatar__meta {
         display: none;
+    }
+
+    .topbar {
+        border-radius: 18px;
+        padding: .7rem;
     }
 
     .card {
@@ -954,5 +916,48 @@ img {
 
     .people__when {
         display: none;
+    }
+}
+
+@media (max-width: 860px) {
+    .auth-card {
+        grid-template-columns: 1fr;
+        min-height: 0;
+    }
+
+    .auth-aside {
+        padding: 2.5rem 1.75rem;
+    }
+
+    .auth-main {
+        margin-left: 0;
+        padding: 2rem 1.5rem 2.5rem;
+        border-radius: 0;
+    }
+
+    .field-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .auth-main__head {
+        justify-content: center;
+        margin-bottom: 1.25rem;
+    }
+
+    .form-actions {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .btn-primary-brand {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+        animation: none !important;
     }
 }
