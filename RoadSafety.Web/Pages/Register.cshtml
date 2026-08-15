@@ -1,121 +1,154 @@
 @page
 @model RoadSafety.Web.Pages.RegisterModel
 @{
-    ViewData["Title"] = "Create Account";
+    ViewData["Title"] = "Create account";
+    Layout = "_AuthLayout";
 }
 
-<div class="row justify-content-center mt-5">
-    <div class="col-md-6">
-        <h1 class="h3 mb-4">Create Officer Account</h1>
+<div class="auth-card">
 
-        @if (Model.ErrorMessage is not null)
-        {
-            <div class="alert alert-danger">@Model.ErrorMessage</div>
-        }
+    <aside class="auth-aside">
+        <svg class="auth-aside__mark" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <path d="M24 3 6 10v13c0 11 7.7 19.9 18 22 10.3-2.1 18-11 18-22V10L24 3Z"
+                  fill="rgba(255,255,255,.16)" stroke="#fff" stroke-width="2" stroke-linejoin="round" />
+            <path d="M24 14v20M17 20h14M15 27h18" stroke="#fff" stroke-width="2" stroke-linecap="round" />
+        </svg>
 
-        <form method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <h1>Welcome</h1>
+        <p>Register your force number to reach accident analysis for your station.</p>
 
-            <div class="mb-3">
-                <label asp-for="Input.FullName" class="form-label"></label>
-                <input asp-for="Input.FullName" class="form-control" />
-                <span asp-validation-for="Input.FullName" class="text-danger"></span>
-            </div>
+        <a class="auth-aside__action" asp-page="/Index">Sign in</a>
+    </aside>
 
-            <div class="mb-3">
-                <label asp-for="Input.ForceNumber" class="form-label"></label>
-                <input asp-for="Input.ForceNumber" class="form-control" placeholder="ZP-00001" />
-                <span asp-validation-for="Input.ForceNumber" class="text-danger"></span>
-            </div>
+    <section class="auth-main">
 
-            <div class="mb-3">
-                <label asp-for="Input.Email" class="form-label"></label>
-                <input asp-for="Input.Email" class="form-control" />
-                <span asp-validation-for="Input.Email" class="text-danger"></span>
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="Input.CompanyId" class="form-label">Company</label>
-                <select asp-for="Input.CompanyId" id="companySelect" class="form-select">
-                    <option value="">Select a company</option>
+        <form method="post" novalidate>
+            <div class="auth-main__head">
+                <div class="segmented" role="radiogroup" aria-label="Organisation">
                     @foreach (var company in Model.Companies)
                     {
-                        <option value="@company.Id">@company.Name</option>
+                        <label class="segmented__option">
+                            <input type="radio"
+                                   asp-for="Input.CompanyId"
+                                   value="@company.Id"
+                                   data-company-name="@company.Name" />
+                            <span>@company.Name</span>
+                        </label>
                     }
-                </select>
-                <span asp-validation-for="Input.CompanyId" class="text-danger"></span>
+                </div>
             </div>
 
-            <div class="mb-3">
-                <label asp-for="Input.BranchReferenceNumber" class="form-label"></label>
-                <select asp-for="Input.BranchReferenceNumber" id="branchSelect" class="form-select">
-                    <option value="">Select a company first</option>
-                </select>
-                <span asp-validation-for="Input.BranchReferenceNumber" class="text-danger"></span>
+            <h2 class="auth-title" id="formTitle">Create your officer account</h2>
+            <p class="auth-subtitle">Choose your organisation, then the station you are posted to.</p>
+
+            @if (Model.ErrorMessage is not null)
+            {
+                <div class="alert-brand" role="alert">@Model.ErrorMessage</div>
+            }
+
+            <div class="field-grid">
+                <div class="field">
+                    <label asp-for="Input.FullName"></label>
+                    <input asp-for="Input.FullName" placeholder="Grace Banda" autocomplete="name" />
+                    <span class="field-error" asp-validation-for="Input.FullName"></span>
+                </div>
+
+                <div class="field">
+                    <label asp-for="Input.ForceNumber"></label>
+                    <input asp-for="Input.ForceNumber" placeholder="ZP-00123" autocomplete="username" />
+                    <span class="field-error" asp-validation-for="Input.ForceNumber"></span>
+                </div>
+
+                <div class="field">
+                    <label asp-for="Input.Email"></label>
+                    <input asp-for="Input.Email" placeholder="grace.banda@police.gov.zm" autocomplete="email" />
+                    <span class="field-error" asp-validation-for="Input.Email"></span>
+                </div>
+
+                <div class="field">
+                    <label asp-for="Input.BranchReferenceNumber"></label>
+                    <select asp-for="Input.BranchReferenceNumber" id="branchSelect">
+                        <option value="">Choose an organisation first</option>
+                    </select>
+                    <span class="field-error" asp-validation-for="Input.BranchReferenceNumber"></span>
+                </div>
+
+                <div class="field">
+                    <label asp-for="Input.Password"></label>
+                    <input asp-for="Input.Password" placeholder="At least 8 characters" autocomplete="new-password" />
+                    <span class="field-error" asp-validation-for="Input.Password"></span>
+                </div>
+
+                <div class="field">
+                    <label asp-for="Input.ConfirmPassword"></label>
+                    <input asp-for="Input.ConfirmPassword" placeholder="Repeat your password" autocomplete="new-password" />
+                    <span class="field-error" asp-validation-for="Input.ConfirmPassword"></span>
+                </div>
+
+                <div class="field field--wide">
+                    <span class="field-error" asp-validation-for="Input.CompanyId"></span>
+                </div>
             </div>
 
-            <div class="mb-3">
-                <label asp-for="Input.Password" class="form-label"></label>
-                <input asp-for="Input.Password" class="form-control" autocomplete="new-password" />
-                <span asp-validation-for="Input.Password" class="text-danger"></span>
+            <div class="form-actions form-actions--split">
+                <a class="link-muted" asp-page="/Index">Already registered? <b>Sign in</b></a>
+                <button type="submit" class="btn-primary-brand">Create account</button>
             </div>
-
-            <div class="mb-3">
-                <label asp-for="Input.ConfirmPassword" class="form-label"></label>
-                <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="new-password" />
-                <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
-            </div>
-
-            <button type="submit" class="btn btn-primary w-100">Create Account</button>
         </form>
 
-        <p class="mt-3 text-center">
-            <a asp-page="/Index">Back to sign in</a>
-        </p>
-    </div>
+    </section>
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-
     <script id="branchData" type="application/json">@Html.Raw(Model.BranchesJson)</script>
     <script>
         (function () {
             var branches = JSON.parse(document.getElementById('branchData').textContent);
-            var companySelect = document.getElementById('companySelect');
+            var companyInputs = Array.prototype.slice.call(
+                document.querySelectorAll('input[name="Input.CompanyId"]'));
             var branchSelect = document.getElementById('branchSelect');
-            var selectedBranch = branchSelect.value;
+            var formTitle = document.getElementById('formTitle');
+            var chosenBranch = '@Model.Input.BranchReferenceNumber';
 
-            function refreshBranches() {
-                var companyId = parseInt(companySelect.value, 10);
+            function selectedCompany() {
+                for (var i = 0; i < companyInputs.length; i++) {
+                    if (companyInputs[i].checked) return companyInputs[i];
+                }
+                return null;
+            }
+
+            function refresh(keepBranch) {
+                var input = selectedCompany();
                 branchSelect.innerHTML = '';
 
-                if (isNaN(companyId)) {
-                    branchSelect.appendChild(new Option('Select a company first', ''));
+                if (!input) {
+                    branchSelect.appendChild(new Option('Choose an organisation first', ''));
+                    formTitle.textContent = 'Create your officer account';
                     return;
                 }
 
-                branchSelect.appendChild(new Option('Select a branch', ''));
+                formTitle.textContent = 'Register with ' + input.dataset.companyName;
+
+                var companyId = parseInt(input.value, 10);
+                branchSelect.appendChild(new Option('Select your station', ''));
 
                 branches
                     .filter(function (b) { return b.CompanyId === companyId; })
                     .forEach(function (b) {
                         var option = new Option(b.Name, b.ReferenceNumber);
-                        // Keep the previous choice selected when the form redisplays
-                        // after a validation error.
-                        if (b.ReferenceNumber === selectedBranch) {
+                        if (keepBranch && b.ReferenceNumber === chosenBranch) {
                             option.selected = true;
                         }
                         branchSelect.appendChild(option);
                     });
             }
 
-            companySelect.addEventListener('change', function () {
-                selectedBranch = '';
-                refreshBranches();
+            companyInputs.forEach(function (input) {
+                input.addEventListener('change', function () { refresh(false); });
             });
 
-            refreshBranches();
+            // Keep the posted-back choice when validation redisplays the form.
+            refresh(true);
         })();
     </script>
 }

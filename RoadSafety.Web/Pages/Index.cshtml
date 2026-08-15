@@ -1,43 +1,55 @@
 @page
 @model RoadSafety.Web.Pages.IndexModel
 @{
-    ViewData["Title"] = "Sign In";
+    ViewData["Title"] = "Sign in";
+    Layout = "_AuthLayout";
 }
 
-<div class="row justify-content-center mt-5">
-    <div class="col-md-5">
-        <h1 class="h3 mb-1">Road Accident Analysis</h1>
-        <p class="text-muted mb-4">Officer sign in</p>
+<div class="auth-card">
+
+    <aside class="auth-aside">
+        <svg class="auth-aside__mark" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <path d="M24 3 6 10v13c0 11 7.7 19.9 18 22 10.3-2.1 18-11 18-22V10L24 3Z"
+                  fill="rgba(255,255,255,.16)" stroke="#fff" stroke-width="2" stroke-linejoin="round" />
+            <path d="M24 14v20M17 20h14M15 27h18" stroke="#fff" stroke-width="2" stroke-linecap="round" />
+        </svg>
+
+        <h1>Road Accident Analysis</h1>
+        <p>Sign in with your force number to review collisions across your station.</p>
+
+        <a class="auth-aside__action" asp-page="/Register">Create account</a>
+    </aside>
+
+    <section class="auth-main">
+
+        <h2 class="auth-title">Officer sign in</h2>
+        <p class="auth-subtitle">Use the force number issued by your station.</p>
 
         @if (Model.ErrorMessage is not null)
         {
-            <div class="alert alert-danger">@Model.ErrorMessage</div>
+            <div class="alert-brand" role="alert">@Model.ErrorMessage</div>
         }
 
-        <form method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <form method="post" novalidate>
+            <div class="field-grid">
+                <div class="field field--wide">
+                    <label asp-for="Input.ForceNumber"></label>
+                    <input asp-for="Input.ForceNumber" placeholder="ZP-00001" autocomplete="username" />
+                    <span class="field-error" asp-validation-for="Input.ForceNumber"></span>
+                </div>
 
-            <div class="mb-3">
-                <label asp-for="Input.ForceNumber" class="form-label"></label>
-                <input asp-for="Input.ForceNumber" class="form-control" placeholder="ZP-00001" autocomplete="username" />
-                <span asp-validation-for="Input.ForceNumber" class="text-danger"></span>
+                <div class="field field--wide">
+                    <label asp-for="Input.Password"></label>
+                    <input asp-for="Input.Password" placeholder="Your password" autocomplete="current-password" />
+                    <span class="field-error" asp-validation-for="Input.Password"></span>
+                </div>
             </div>
 
-            <div class="mb-3">
-                <label asp-for="Input.Password" class="form-label"></label>
-                <input asp-for="Input.Password" class="form-control" autocomplete="current-password" />
-                <span asp-validation-for="Input.Password" class="text-danger"></span>
+            <div class="form-actions form-actions--split">
+                <a class="link-muted" asp-page="/Register">No account yet? <b>Register</b></a>
+                <button type="submit" class="btn-primary-brand">Sign in</button>
             </div>
-
-            <button type="submit" class="btn btn-primary w-100">Sign In</button>
         </form>
 
-        <p class="mt-3 text-center">
-            <a asp-page="/Register">Create an account</a>
-        </p>
-    </div>
+    </section>
 </div>
-
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-}

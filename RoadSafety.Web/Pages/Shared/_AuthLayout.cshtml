@@ -7,17 +7,13 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
-    <header class="app-nav">
-        <div class="app-shell" style="padding-top:0;padding-bottom:0;">
-            <a class="navbar-brand" asp-page="/Dashboard">Road Accident Analysis</a>
-        </div>
-    </header>
-
-    <main class="app-shell">
+    <main class="auth-stage">
         @RenderBody()
     </main>
 
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

@@ -1,31 +1,496 @@
-html {
-  font-size: 14px;
+/* ==========================================================================
+   Road Accident Analysis — design tokens
+   The single source of colour, type and spacing for the whole project.
+   ========================================================================== */
+
+:root {
+    /* Brand ------------------------------------------------------------- */
+    --indigo: #3A3FDF;
+    --azure: #2478E8;
+    --cyan: #12C7EE;
+
+    --brand-gradient: linear-gradient(135deg, var(--indigo) 0%, var(--azure) 48%, var(--cyan) 100%);
+
+    /* Neutrals ---------------------------------------------------------- */
+    --ink: #17203A;
+    --slate: #7C8AA0;
+    --line: #E2E9F2;
+    --field: #F4F7FB;
+    --surface: #FFFFFF;
+    --canvas: #EEF3F9;
+
+    /* Feedback ---------------------------------------------------------- */
+    --danger: #D64550;
+    --danger-soft: #FDECEE;
+    --success: #16A97A;
+
+    /* Type -------------------------------------------------------------- */
+    --font-sans: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system,
+                 "Helvetica Neue", Arial, sans-serif;
+
+    /* Elevation --------------------------------------------------------- */
+    --shadow-card: 0 24px 60px -20px rgba(23, 32, 58, .28);
+    --shadow-btn: 0 8px 20px -6px rgba(36, 120, 232, .55);
+
+    --radius-card: 26px;
+    --radius-field: 10px;
 }
 
-@media (min-width: 768px) {
-  html {
+/* Base ---------------------------------------------------------------- */
+
+html {
     font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
 }
 
 body {
-  margin-bottom: 60px;
+    font-family: var(--font-sans);
+    color: var(--ink);
+    background: var(--canvas);
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+:focus-visible {
+    outline: 3px solid var(--azure);
+    outline-offset: 2px;
+    border-radius: 4px;
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+/* ==========================================================================
+   Auth screens (sign in / register)
+   ========================================================================== */
+
+.auth-stage {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 2rem 1.25rem;
+}
+
+.auth-card {
+    width: min(1040px, 100%);
+    background: var(--surface);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 355px 1fr;
+    min-height: 560px;
+}
+
+/* Left: the gradient panel ------------------------------------------- */
+
+.auth-aside {
+    background: var(--brand-gradient);
+    color: #fff;
+    padding: 3.25rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 1.25rem;
+    position: relative;
+}
+
+.auth-aside__mark {
+    width: 68px;
+    height: 68px;
+}
+
+.auth-aside h1 {
+    font-size: 1.9rem;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    margin: 0;
+}
+
+.auth-aside p {
+    font-size: .9rem;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, .82);
+    max-width: 24ch;
+    margin: 0;
+}
+
+.auth-aside__action {
+    margin-top: .75rem;
+    display: inline-block;
+    padding: .7rem 2.6rem;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--azure);
+    font-weight: 600;
+    font-size: .95rem;
+    text-decoration: none;
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.auth-aside__action:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px -10px rgba(0, 0, 0, .45);
+    color: var(--indigo);
+}
+
+/* Right: the form panel, with the signature curved edge --------------- */
+
+.auth-main {
+    background: var(--surface);
+    padding: 2.75rem 3rem 3rem;
+    position: relative;
+    /* The curve that bites into the gradient panel. */
+    margin-left: -56px;
+    border-top-left-radius: 56% 46%;
+    border-bottom-left-radius: 56% 46%;
+    padding-left: 5rem;
+}
+
+.auth-main__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    margin-bottom: .5rem;
+}
+
+.auth-title {
+    font-size: 1.65rem;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    text-align: center;
+    margin: 0 0 .35rem;
+}
+
+.auth-subtitle {
+    text-align: center;
+    color: var(--slate);
+    font-size: .9rem;
+    margin: 0 0 1.75rem;
+}
+
+/* Segmented control — one segment per company ------------------------- */
+
+.segmented {
+    display: inline-flex;
+    background: #DCEAFB;
+    border-radius: 999px;
+    padding: 4px;
+    gap: 2px;
+}
+
+.segmented__option {
+    position: relative;
+}
+
+.segmented__option input {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    cursor: pointer;
+}
+
+.segmented__option span {
+    display: block;
+    padding: .45rem 1.15rem;
+    border-radius: 999px;
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--azure);
+    white-space: nowrap;
+    transition: background .18s ease, color .18s ease;
+}
+
+.segmented__option input:checked + span {
+    background: var(--azure);
+    color: #fff;
+}
+
+.segmented__option input:focus-visible + span {
+    outline: 3px solid var(--indigo);
+    outline-offset: 2px;
+}
+
+/* Fields --------------------------------------------------------------- */
+
+.field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem 1.25rem;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: .3rem;
+}
+
+.field--wide {
+    grid-column: 1 / -1;
+}
+
+.field label {
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--slate);
+    letter-spacing: .01em;
+}
+
+.field input,
+.field select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: .8rem .95rem;
+    font: inherit;
+    font-size: .92rem;
+    color: var(--ink);
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-field);
+    transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+
+.field select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%237C8AA0' d='M1.4 0 6 4.6 10.6 0 12 1.4 6 7.4 0 1.4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    padding-right: 2.5rem;
+}
+
+.field input::placeholder {
+    color: var(--slate);
+}
+
+.field input:focus,
+.field select:focus {
+    outline: none;
+    background: var(--surface);
+    border-color: var(--azure);
+    box-shadow: 0 0 0 4px rgba(36, 120, 232, .14);
+}
+
+.field input:disabled,
+.field select:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.field-error {
+    font-size: .75rem;
+    color: var(--danger);
+    min-height: 1em;
+}
+
+/* Buttons -------------------------------------------------------------- */
+
+.btn-primary-brand {
+    appearance: none;
+    border: 0;
+    padding: .82rem 2.4rem;
+    border-radius: 999px;
+    background: var(--azure);
+    color: #fff;
+    font: inherit;
+    font-size: .95rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--shadow-btn);
+    transition: transform .18s ease, background .18s ease;
+}
+
+.btn-primary-brand:hover {
+    background: var(--indigo);
+    transform: translateY(-1px);
+}
+
+.btn-primary-brand:active {
+    transform: translateY(0);
+}
+
+.form-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.6rem;
+}
+
+.form-actions--split {
+    justify-content: space-between;
+}
+
+.link-muted {
+    color: var(--slate);
+    font-size: .85rem;
+    text-decoration: none;
+}
+
+.link-muted b {
+    color: var(--azure);
+}
+
+.link-muted:hover b {
+    text-decoration: underline;
+}
+
+/* Alerts --------------------------------------------------------------- */
+
+.alert-brand {
+    background: var(--danger-soft);
+    border: 1px solid rgba(214, 69, 80, .28);
+    color: #96323B;
+    padding: .7rem 1rem;
+    border-radius: var(--radius-field);
+    font-size: .86rem;
+    margin-bottom: 1.1rem;
+}
+
+/* Responsive ----------------------------------------------------------- */
+
+@media (max-width: 860px) {
+    .auth-card {
+        grid-template-columns: 1fr;
+        min-height: 0;
+    }
+
+    .auth-aside {
+        padding: 2.5rem 1.75rem;
+    }
+
+    .auth-main {
+        margin-left: 0;
+        padding: 2rem 1.5rem 2.5rem;
+        border-radius: 0;
+    }
+
+    .field-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .auth-main__head {
+        justify-content: center;
+        margin-bottom: 1.25rem;
+    }
+
+    .form-actions {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .btn-primary-brand {
+        width: 100%;
+    }
+
+    .link-muted {
+        text-align: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+/* ==========================================================================
+   Application shell (signed-in pages)
+   ========================================================================== */
+
+.app-nav {
+    background: var(--brand-gradient);
+    padding: .9rem 0;
+}
+
+.app-nav .navbar-brand {
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: -.01em;
+}
+
+.app-nav .navbar-brand:hover {
+    color: #fff;
+}
+
+.app-shell {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 4rem;
+}
+
+.panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    padding: 2rem 2.25rem;
+    box-shadow: 0 12px 32px -24px rgba(23, 32, 58, .5);
+}
+
+.panel__title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    margin: 0 0 1.5rem;
+}
+
+.detail-list {
+    display: grid;
+    grid-template-columns: minmax(0, 10rem) 1fr;
+    gap: .85rem 1.5rem;
+    margin: 0 0 1.75rem;
+    font-size: .95rem;
+}
+
+.detail-list dt {
+    color: var(--slate);
+    font-weight: 600;
+    font-size: .82rem;
+    align-self: center;
+}
+
+.detail-list dd {
+    margin: 0;
+    font-weight: 600;
+}
+
+.notice {
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--azure);
+    border-radius: var(--radius-field);
+    padding: .9rem 1.1rem;
+    color: var(--slate);
+    font-size: .88rem;
+    margin-bottom: 1.75rem;
+}
+
+.btn-ghost-brand {
+    appearance: none;
+    padding: .7rem 1.6rem;
+    border-radius: 999px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--slate);
+    font: inherit;
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color .18s ease, color .18s ease;
+}
+
+.btn-ghost-brand:hover {
+    border-color: var(--azure);
+    color: var(--azure);
+}
+
+@media (max-width: 600px) {
+    .detail-list {
+        grid-template-columns: 1fr;
+        gap: .25rem;
+    }
+
+    .detail-list dd {
+        margin-bottom: .75rem;
+    }
 }
