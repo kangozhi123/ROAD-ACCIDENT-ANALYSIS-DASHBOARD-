@@ -1,0 +1,23 @@
+@page
+@model ErrorModel
+@{
+    ViewData["Title"] = "Something went wrong";
+}
+
+<div class="message-page">
+    <div class="message-page__code">Error</div>
+
+    <h1>This page could not be loaded</h1>
+
+    <p>
+        The request did not complete. Try again, and if it keeps happening
+        pass the reference below to whoever maintains this system.
+    </p>
+
+    @if (Model.ShowRequestId)
+    {
+        <p><code>@Model.RequestId</code></p>
+    }
+
+    <a class="btn-primary-brand" asp-page="/Dashboard" style="text-decoration:none;">Back to dashboard</a>
+</div>

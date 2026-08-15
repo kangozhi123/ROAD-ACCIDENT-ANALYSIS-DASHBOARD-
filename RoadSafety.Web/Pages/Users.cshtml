@@ -1,0 +1,616 @@
+@page
+@model RoadSafety.Web.Pages.UsersModel
+@using RoadSafety.Web.ViewModels
+@{
+    ViewData["Title"] = "Officers";
+}
+
+@section Styles {
+    <partial name="_LibStyles" />
+}
+
+<partial name="_PageHeader" model="@(new PageHeader(
+    "Officers",
+    Model.CanChooseBranch
+        ? $"{Model.Officers.Count} registered across all stations"
+        : $"{Model.Officers.Count} at {User.FindFirst("BranchName")?.Value}",
+    new[] { new Crumb("Dashboard", "/Dashboard"), new Crumb("Officers") },
+    ActionText: Model.CanManage ? "Add officer" : null,
+    ActionModalTarget: Model.CanManage ? "#addOfficer" : null))" />
+
+<section class="card">
+    <table id="officersTable" class="table" style="width:100%">
+        <thead>
+            <tr>
+                <th>Officer</th>
+                <th>Force number</th>
+                <th>Station</th>
+                <th>Organisation</th>
+                <th>Role</th>
+                <th>Registered</th>
+                <th class="col-actions">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var officer in Model.Officers)
+            {
+                var initials = string.Concat(
+                    officer.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                                    .Take(2)
+                                    .Select(part => char.ToUpperInvariant(part[0])));
+
+                <tr>
+                    <td>
+                        <div class="cell-person">
+                            <span class="people__avatar" aria-hidden="true">@initials</span>
+                            <span>
+                                <span class="people__name">@officer.FullName</span>
+                                <span class="people__meta">@officer.Email</span>
+                            </span>
+                        </div>
+                    </td>
+                    <td>@officer.ForceNumber</td>
+                    <td>@officer.BranchName</td>
+                    <td>@officer.CompanyName</td>
+                    <td><span class="role-tag role-tag--@officer.Role.ToString().ToLowerInvariant()">@RoleLabel(officer.Role)</span></td>
+                    <td data-order="@officer.CreatedAt.ToString("s")">@officer.CreatedAt.ToString("d MMM yyyy")</td>
+                    <td>
+                        <div class="row-actions">
+                            <button type="button" class="icon-btn" data-view="@officer.Id"
+                                    title="View @officer.FullName" aria-label="View @officer.FullName">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" />
+                                </svg>
+                            </button>
+
+                            @if (Model.CanManage)
+                            {
+                            <button type="button" class="icon-btn" data-edit="@officer.Id"
+                                    title="Edit @officer.FullName" aria-label="Edit @officer.FullName">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                                </svg>
+                            </button>
+
+                            <button type="button" class="icon-btn icon-btn--danger"
+                                    data-delete="@officer.Id" data-name="@officer.FullName"
+                                    title="Remove @officer.FullName" aria-label="Remove @officer.FullName">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+                                </svg>
+                            </button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</section>
+
+@* Token for the fetch calls below. *@
+<form id="antiforgery">@Html.AntiForgeryToken()</form>
+
+@* ── View officer ───────────────────────────────────────────────────── *@
+<div class="modal fade" id="viewOfficer" tabindex="-1" aria-labelledby="viewOfficerTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="viewOfficerTitle">Officer</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="detail-list" id="viewBody"></dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ── Edit officer ───────────────────────────────────────────────────── *@
+<div class="modal fade" id="editOfficer" tabindex="-1" aria-labelledby="editOfficerTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="editForm">
+                <input type="hidden" id="editId" />
+
+                <div class="modal-header">
+                    <h2 class="modal-title" id="editOfficerTitle">Edit officer</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="alert-brand d-none" id="editError" role="alert"></div>
+
+                    <div class="field-grid">
+                        <div class="field field--wide">
+                            <label for="editFullName">Full name</label>
+                            <input id="editFullName" name="fullName" required />
+                        </div>
+
+                        <div class="field field--wide">
+                            <label for="editEmail">Email</label>
+                            <input id="editEmail" name="email" type="email" required />
+                        </div>
+
+                        <div class="field">
+                            <label for="editCompany">Organisation</label>
+                            <select id="editCompany" required></select>
+                        </div>
+
+                        <div class="field">
+                            <label for="editBranch">Station</label>
+                            <select id="editBranch" name="branchReferenceNumber" required></select>
+                        </div>
+
+                        <div class="field field--wide">
+                            <label for="editForce">Force number</label>
+                            <input id="editForce" disabled />
+                            <span class="field-error">Officers sign in with this, so it cannot be changed here.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-ghost-brand" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-primary-brand">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Add officer: three-step dialog ─────────────────────────────────── *@
+<div class="modal fade" id="addOfficer" tabindex="-1" aria-labelledby="addOfficerTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" novalidate>
+                <div class="modal-header">
+                    <h2 class="modal-title" id="addOfficerTitle">Add an officer</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    @if (Model.ErrorMessage is not null)
+                    {
+                        <div class="alert-brand" role="alert">@Model.ErrorMessage</div>
+                    }
+
+                    <div id="officerStepper" class="bs-stepper">
+                        <div class="bs-stepper-header" role="tablist">
+                            <div class="step" data-target="#stepIdentity">
+                                <button type="button" class="step-trigger" role="tab"
+                                        id="tabIdentity" aria-controls="stepIdentity">
+                                    <span class="bs-stepper-circle">1</span>
+                                    <span class="bs-stepper-label">Officer</span>
+                                </button>
+                            </div>
+                            <div class="line"></div>
+
+                            <div class="step" data-target="#stepPosting">
+                                <button type="button" class="step-trigger" role="tab"
+                                        id="tabPosting" aria-controls="stepPosting">
+                                    <span class="bs-stepper-circle">2</span>
+                                    <span class="bs-stepper-label">Posting</span>
+                                </button>
+                            </div>
+                            <div class="line"></div>
+
+                            <div class="step" data-target="#stepAccess">
+                                <button type="button" class="step-trigger" role="tab"
+                                        id="tabAccess" aria-controls="stepAccess">
+                                    <span class="bs-stepper-circle">3</span>
+                                    <span class="bs-stepper-label">Access</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bs-stepper-content">
+
+                            <div id="stepIdentity" class="content" role="tabpanel" aria-labelledby="tabIdentity">
+                                <div class="field-grid">
+                                    <div class="field field--wide">
+                                        <label asp-for="Input.FullName"></label>
+                                        <input asp-for="Input.FullName" placeholder="Grace Banda" required />
+                                        <span class="field-error" asp-validation-for="Input.FullName"></span>
+                                    </div>
+
+                                    <div class="field">
+                                        <label asp-for="Input.ForceNumber"></label>
+                                        <input asp-for="Input.ForceNumber" required
+                                               placeholder="Fills in from the name" />
+                                        <span class="field-error" asp-validation-for="Input.ForceNumber"></span>
+                                        <span class="field-hint">Built from the officer's initials. Change it if they already have a number.</span>
+                                    </div>
+
+                                    <div class="field">
+                                        <label asp-for="Input.Email"></label>
+                                        <input asp-for="Input.Email" type="email"
+                                               placeholder="grace.banda@police.gov.zm" required />
+                                        <span class="field-error" asp-validation-for="Input.Email"></span>
+                                    </div>
+                                </div>
+
+                                <div class="step-actions">
+                                    <span></span>
+                                    <button type="button" class="btn-primary-brand" data-step-next>Continue</button>
+                                </div>
+                            </div>
+
+                            <div id="stepPosting" class="content" role="tabpanel" aria-labelledby="tabPosting">
+                                @if (Model.CanChooseBranch)
+                                {
+                                    <div class="field-grid">
+                                        <div class="field">
+                                            <label asp-for="Input.CompanyId"></label>
+                                            <select asp-for="Input.CompanyId" id="modalCompany" required>
+                                                <option value="">Select an organisation</option>
+                                                @foreach (var company in Model.Companies)
+                                                {
+                                                    <option value="@company.Id">@company.Name</option>
+                                                }
+                                            </select>
+                                            <span class="field-error" asp-validation-for="Input.CompanyId"></span>
+                                        </div>
+
+                                        <div class="field">
+                                            <label asp-for="Input.BranchReferenceNumber"></label>
+                                            <select asp-for="Input.BranchReferenceNumber" id="modalBranch" required>
+                                                <option value="">Choose an organisation first</option>
+                                            </select>
+                                            <span class="field-error" asp-validation-for="Input.BranchReferenceNumber"></span>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    @* Hidden rather than disabled: the fields still have to satisfy
+                                       validation, and the server resolves the posting regardless of
+                                       what arrives here. *@
+                                    <input type="hidden" asp-for="Input.CompanyId" value="@Model.OwnCompanyId" />
+                                    <input type="hidden" asp-for="Input.BranchReferenceNumber" value="@Model.OwnBranchReference" />
+
+                                    <div class="posting-fixed">
+                                        <span class="posting-fixed__label">Station</span>
+                                        <span class="posting-fixed__value">@User.FindFirst("BranchName")?.Value</span>
+                                        <p>Officers you add join your own station. Only a system administrator can post someone elsewhere.</p>
+                                    </div>
+                                }
+
+                                <div class="step-actions">
+                                    <button type="button" class="btn-ghost-brand" data-step-prev>Back</button>
+                                    <button type="button" class="btn-primary-brand" data-step-next>Continue</button>
+                                </div>
+                            </div>
+
+                            <div id="stepAccess" class="content" role="tabpanel" aria-labelledby="tabAccess">
+                                <div class="field-grid">
+                                    <div class="field">
+                                        <label asp-for="Input.Password"></label>
+                                        <input asp-for="Input.Password" placeholder="At least 8 characters"
+                                               minlength="8" required autocomplete="new-password" />
+                                        <span class="field-error" asp-validation-for="Input.Password"></span>
+                                    </div>
+
+                                    <div class="field">
+                                        <label asp-for="Input.ConfirmPassword"></label>
+                                        <input asp-for="Input.ConfirmPassword" placeholder="Repeat the password"
+                                               required autocomplete="new-password" />
+                                        <span class="field-error" asp-validation-for="Input.ConfirmPassword"></span>
+                                    </div>
+                                </div>
+
+                                <p class="step-note">
+                                    The officer signs in with their force number and this password.
+                                    Ask them to change it after their first sign in.
+                                </p>
+
+                                <div class="step-actions">
+                                    <button type="button" class="btn-ghost-brand" data-step-prev>Back</button>
+                                    <button type="submit" class="btn-primary-brand">Add officer</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@functions {
+    static string RoleLabel(RoadSafety.Web.Models.UserRole role) => role switch
+    {
+        RoadSafety.Web.Models.UserRole.SystemAdministrator => "System admin",
+        RoadSafety.Web.Models.UserRole.StationAdministrator => "Station admin",
+        _ => "Officer"
+    };
+}
+
+@section Scripts {
+    <partial name="_LibScripts" />
+
+    <script id="branchData" type="application/json">@Html.Raw(Model.BranchesJson)</script>
+    <script id="companyData" type="application/json">@Html.Raw(Json.Serialize(Model.Companies))</script>
+    <script>
+        (function () {
+            var branches = JSON.parse(document.getElementById('branchData').textContent);
+            var companies = JSON.parse(document.getElementById('companyData').textContent);
+            var token = document.querySelector('#antiforgery input[name="__RequestVerificationToken"]').value;
+
+            /* ── Officers table ─────────────────────────────────────── */
+            var table = new DataTable('#officersTable', {
+                order: [[5, 'desc']],
+                columnDefs: [
+                    { orderable: false, targets: [0, 6] },
+                    { searchable: false, targets: 6 }
+                ]
+            });
+
+            /* ── Shared helpers ─────────────────────────────────────── */
+            function post(handler, body) {
+                var data = new FormData();
+                Object.keys(body).forEach(function (k) { data.append(k, body[k]); });
+
+                return fetch('/Users?handler=' + handler, {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': token },
+                    body: data
+                }).then(function (response) {
+                    return response.json()
+                        .catch(function () { return {}; })
+                        .then(function (payload) {
+                            if (!response.ok) throw new Error(payload.error || 'That did not work.');
+                            return payload;
+                        });
+                });
+            }
+
+            function fillBranches(select, companyId, selectedRef) {
+                select.innerHTML = '';
+                select.appendChild(new Option('Select a station', ''));
+
+                branches
+                    .filter(function (b) { return b.CompanyId === companyId; })
+                    .forEach(function (b) {
+                        var option = new Option(b.Name, b.ReferenceNumber);
+                        if (b.ReferenceNumber === selectedRef) option.selected = true;
+                        select.appendChild(option);
+                    });
+            }
+
+            /* ── View ───────────────────────────────────────────────── */
+            var viewModal = new bootstrap.Modal(document.getElementById('viewOfficer'));
+            var viewBody = document.getElementById('viewBody');
+
+            function row(label, value) {
+                var dt = document.createElement('dt');
+                dt.textContent = label;
+                var dd = document.createElement('dd');
+                dd.textContent = value;
+                viewBody.appendChild(dt);
+                viewBody.appendChild(dd);
+            }
+
+            document.querySelectorAll('[data-view]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    fetch('/Users?handler=Officer&id=' + button.dataset.view)
+                        .then(function (r) {
+                            if (!r.ok) throw new Error('That officer no longer exists.');
+                            return r.json();
+                        })
+                        .then(function (o) {
+                            viewBody.innerHTML = '';
+                            row('Name', o.fullName);
+                            row('Force number', o.forceNumber);
+                            row('Email', o.email);
+                            row('Station', o.branchName + ' (' + o.branchReferenceNumber + ')');
+                            row('Organisation', o.companyName);
+                            row('Registered', new Date(o.createdAt).toLocaleDateString());
+                            viewModal.show();
+                        })
+                        .catch(function (e) { notify.failure(e.message); });
+                });
+            });
+
+            /* ── Edit ───────────────────────────────────────────────── */
+            var editModal = new bootstrap.Modal(document.getElementById('editOfficer'));
+            var editForm = document.getElementById('editForm');
+            var editError = document.getElementById('editError');
+            var editCompany = document.getElementById('editCompany');
+            var editBranch = document.getElementById('editBranch');
+
+            companies.forEach(function (c) {
+                editCompany.appendChild(new Option(c.name, c.id));
+            });
+
+            editCompany.addEventListener('change', function () {
+                fillBranches(editBranch, parseInt(editCompany.value, 10), null);
+            });
+
+            document.querySelectorAll('[data-edit]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    fetch('/Users?handler=Officer&id=' + button.dataset.edit)
+                        .then(function (r) {
+                            if (!r.ok) throw new Error('That officer no longer exists.');
+                            return r.json();
+                        })
+                        .then(function (o) {
+                            editError.classList.add('d-none');
+                            document.getElementById('editId').value = o.id;
+                            document.getElementById('editFullName').value = o.fullName;
+                            document.getElementById('editEmail').value = o.email;
+                            document.getElementById('editForce').value = o.forceNumber;
+                            editCompany.value = o.companyId;
+                            fillBranches(editBranch, o.companyId, o.branchReferenceNumber);
+                            editModal.show();
+                        })
+                        .catch(function (e) { notify.failure(e.message); });
+                });
+            });
+
+            editForm.addEventListener('submit', function (event) {
+                event.preventDefault();
+
+                var id = document.getElementById('editId').value;
+
+                post('Update', {
+                    id: id,
+                    fullName: document.getElementById('editFullName').value,
+                    email: document.getElementById('editEmail').value,
+                    branchReferenceNumber: editBranch.value
+                })
+                    .then(function (payload) {
+                        editModal.hide();
+                        rewriteRow(id, payload.officer);
+                        notify.success(payload.message);
+                    })
+                    .catch(function (e) {
+                        // The dialog is open and the user is looking at it, so
+                        // the message belongs beside the fields, not in a toast.
+                        editError.textContent = e.message;
+                        editError.classList.remove('d-none');
+                    });
+            });
+
+            /** Puts changed values back into the table without a page reload. */
+            function rewriteRow(id, officer) {
+                var button = document.querySelector('[data-edit="' + id + '"]');
+                if (!button || !officer) return;
+
+                var tr = button.closest('tr');
+                tr.querySelector('.people__name').textContent = officer.fullName;
+                tr.querySelector('.people__meta').textContent = officer.email;
+                tr.querySelector('.people__avatar').textContent = initialsOf(officer.fullName);
+                tr.cells[2].textContent = officer.branchName;
+                tr.cells[3].textContent = officer.companyName;
+
+                // DataTables caches cell contents; invalidate so search and
+                // sorting see the new values.
+                table.row(tr).invalidate().draw(false);
+            }
+
+            function initialsOf(name) {
+                return name.split(/\s+/)
+                    .filter(function (part) { return part.length > 0; })
+                    .slice(0, 2)
+                    .map(function (part) { return part[0].toUpperCase(); })
+                    .join('');
+            }
+
+            /* ── Delete ─────────────────────────────────────────────── */
+            document.querySelectorAll('[data-delete]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    notify.confirm({
+                        title: 'Remove ' + button.dataset.name + '?',
+                        text: 'They will lose access immediately. This cannot be undone.',
+                        confirmText: 'Remove officer'
+                    }).then(function (confirmed) {
+                        if (!confirmed) return;
+
+                        post('Delete', { id: button.dataset.delete })
+                            .then(function (payload) {
+                                table.row(button.closest('tr')).remove().draw(false);
+                                updateCount(-1);
+                                notify.success(payload.message);
+                            })
+                            .catch(function (e) { notify.failure(e.message); });
+                    });
+                });
+            });
+
+            /** Keeps the header count in step after a row leaves the table. */
+            function updateCount(delta) {
+                var sub = document.querySelector('.page-head__sub');
+                if (!sub) return;
+
+                var current = parseInt(sub.textContent, 10);
+                if (isNaN(current)) return;
+
+                var next = current + delta;
+                sub.textContent = next + ' registered across all stations';
+            }
+
+            /* ── Add-officer stepper ────────────────────────────────── */
+            var stepperEl = document.getElementById('officerStepper');
+            var stepper = new Stepper(stepperEl, { linear: true, animation: true });
+
+            // Only advance when the current step's own fields are valid, so a
+            // reader cannot skip to the end and submit an empty form.
+            function stepIsValid(panel) {
+                var fields = panel.querySelectorAll('input, select');
+                for (var i = 0; i < fields.length; i++) {
+                    if (!fields[i].checkValidity()) {
+                        fields[i].reportValidity();
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            stepperEl.addEventListener('click', function (event) {
+                var next = event.target.closest('[data-step-next]');
+                var prev = event.target.closest('[data-step-prev]');
+
+                if (next && stepIsValid(next.closest('.content'))) {
+                    stepper.next();
+                } else if (prev) {
+                    stepper.previous();
+                }
+            });
+
+            /* ── Force number follows the name ──────────────────────── */
+            var nameInput = document.getElementById('Input_FullName');
+            var forceInput = document.getElementById('Input_ForceNumber');
+            var forceEditedByHand = forceInput.value.trim() !== '';
+
+            forceInput.addEventListener('input', function () {
+                // Once somebody types their own number, stop overwriting it.
+                forceEditedByHand = true;
+            });
+
+            var lastNameLookedUp = '';
+
+            nameInput.addEventListener('change', function () {
+                var name = nameInput.value.trim();
+
+                if (forceEditedByHand || name === '' || name === lastNameLookedUp) {
+                    return;
+                }
+
+                lastNameLookedUp = name;
+
+                fetch('/Users?handler=NextForceNumber&fullName=' + encodeURIComponent(name))
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (payload) {
+                        if (payload && !forceEditedByHand) {
+                            forceInput.value = payload.forceNumber;
+                        }
+                    })
+                    .catch(function () { /* leave the field for the user to fill */ });
+            });
+
+            var addCompany = document.getElementById('modalCompany');
+            var addBranch = document.getElementById('modalBranch');
+
+            if (addCompany && addBranch) {
+                var chosen = '@Model.Input.BranchReferenceNumber';
+
+                addCompany.addEventListener('change', function () {
+                    fillBranches(addBranch, parseInt(addCompany.value, 10), null);
+                });
+
+                if (addCompany.value) {
+                    fillBranches(addBranch, parseInt(addCompany.value, 10), chosen);
+                }
+            }
+
+        @if (Model.ReopenDialog)
+        {
+            <text>
+            new bootstrap.Modal(document.getElementById('addOfficer')).show();
+            </text>
+        }
+        })();
+    </script>
+}

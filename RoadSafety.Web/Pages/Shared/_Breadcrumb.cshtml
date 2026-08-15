@@ -1,0 +1,28 @@
+@model IReadOnlyList<RoadSafety.Web.ViewModels.Crumb>
+@*
+    Usage:
+        <partial name="_Breadcrumb" model="@(new[] {
+            new Crumb("Dashboard", "/Dashboard"),
+            new Crumb("Collisions")
+        })" />
+*@
+@if (Model is { Count: > 0 })
+{
+    <nav class="crumbs" aria-label="Breadcrumb">
+        <ol>
+            @foreach (var crumb in Model)
+            {
+                <li>
+                    @if (crumb.Page is null)
+                    {
+                        <span aria-current="page">@crumb.Text</span>
+                    }
+                    else
+                    {
+                        <a asp-page="@crumb.Page">@crumb.Text</a>
+                    }
+                </li>
+            }
+        </ol>
+    </nav>
+}

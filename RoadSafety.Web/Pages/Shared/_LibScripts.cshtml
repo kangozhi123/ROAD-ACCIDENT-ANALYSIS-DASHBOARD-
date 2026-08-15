@@ -1,0 +1,19 @@
+@*
+    Scripts for the data libraries. Opt in per page:
+
+        @@section Scripts {
+            <partial name="_LibScripts" />
+            <script> /* your page code */ </script>
+        }
+
+    Kept out of the layout because they are heavy — DataTables, Select2 and
+    Chart.js together are roughly 390KB, and most pages need none of them.
+    Order matters: jQuery first, then the plugins that extend it.
+*@
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/datatables/js/dataTables.min.js"></script>
+<script src="~/lib/datatables/js/dataTables.bootstrap5.min.js"></script>
+<script src="~/lib/select2/js/select2.min.js"></script>
+<script src="~/lib/bs-stepper/js/bs-stepper.min.js"></script>
+<script src="~/lib/chartjs/chart.umd.min.js"></script>
+<script src="~/js/data-ui.js" asp-append-version="true"></script>
