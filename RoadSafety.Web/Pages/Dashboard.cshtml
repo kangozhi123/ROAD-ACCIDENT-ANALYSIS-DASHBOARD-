@@ -4,50 +4,113 @@
     ViewData["Title"] = "Dashboard";
 }
 
-<div class="panel">
-    <h1 class="panel__title">Welcome, @Model.OfficerName</h1>
+<section class="stat-row">
 
-    <dl class="detail-list">
-        <dt>Force number</dt>
-        <dd>@Model.ForceNumber</dd>
+    @* Amber while the dataset is missing; it becomes azure once collisions load,
+       so the accent reports whether the system actually holds crash data. *@
+    <article class="stat" style="--accent:#E8A32A;">
+        <div class="stat__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 9v4M12 17h.01" />
+                <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+            </svg>
+        </div>
+        <div>
+            <div class="stat__label">Collisions recorded</div>
+            <div class="stat__value">@Model.CollisionCount</div>
+            <div class="stat__note">Dataset not imported yet</div>
+        </div>
+    </article>
 
-        <dt>Station</dt>
-        <dd>@Model.BranchName</dd>
+    <article class="stat" style="--accent:var(--azure);">
+        <div class="stat__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" />
+            </svg>
+        </div>
+        <div>
+            <div class="stat__label">Stations</div>
+            <div class="stat__value">@Model.StationCount</div>
+            <div class="stat__note">Across all organisations</div>
+        </div>
+    </article>
 
-        <dt>Organisation</dt>
-        <dd>@Model.CompanyName</dd>
-    </dl>
+    <article class="stat" style="--accent:var(--indigo);">
+        <div class="stat__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 21h18M5 21V7l7-4 7 4v14M10 12h4M10 16h4" />
+            </svg>
+        </div>
+        <div>
+            <div class="stat__label">Organisations</div>
+            <div class="stat__value">@Model.OrganisationCount</div>
+            <div class="stat__note">Police and road safety bodies</div>
+        </div>
+    </article>
 
-    <p class="notice">
-        Accident data has not been loaded yet. Charts and the hotspot map arrive
-        once the collision dataset is imported.
-    </p>
+    <article class="stat" style="--accent:var(--cyan);">
+        <div class="stat__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.9" />
+            </svg>
+        </div>
+        <div>
+            <div class="stat__label">Officers registered</div>
+            <div class="stat__value">@Model.OfficerCount</div>
+            <div class="stat__note">With dashboard access</div>
+        </div>
+    </article>
 
-    <form method="post" asp-page="/Logout" id="signOutForm">
-        <button type="submit" class="btn-ghost-brand">Sign out</button>
-    </form>
-</div>
+</section>
 
-@section Scripts {
-    <script>
-        document.getElementById('signOutForm').addEventListener('submit', function (event) {
-            if (this.dataset.confirmed === 'true') {
-                return;
+<div class="card-grid">
+
+    <section class="card">
+        <div class="card__head">
+            <h2 class="card__title">Collision analysis</h2>
+            <span class="card__hint">Phase 2</span>
+        </div>
+
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 5-6" />
+            </svg>
+
+            <h3>No collision data yet</h3>
+            <p>
+                Monthly totals, severity breakdowns and the hotspot map appear here
+                once the collision dataset is imported. Every figure on this page
+                comes from the database — none of it is sample data.
+            </p>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="card__head">
+            <h2 class="card__title">Recently registered</h2>
+            <span class="card__hint">@Model.OfficerCount total</span>
+        </div>
+
+        <div class="people">
+            @foreach (var officer in Model.RecentOfficers)
+            {
+                var initials = string.Concat(
+                    officer.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                                    .Take(2)
+                                    .Select(part => char.ToUpperInvariant(part[0])));
+
+                <div class="people__row">
+                    <div class="people__avatar" aria-hidden="true">@initials</div>
+                    <div>
+                        <div class="people__name">@officer.FullName</div>
+                        <div class="people__meta">@officer.ForceNumber · @officer.BranchName</div>
+                    </div>
+                    <div class="people__when">@officer.CreatedAt.ToString("d MMM")</div>
+                </div>
             }
+        </div>
+    </section>
 
-            event.preventDefault();
-            var form = this;
-
-            notify.confirm({
-                title: 'Sign out?',
-                text: 'You will need your force number to sign back in.',
-                confirmText: 'Sign out'
-            }).then(function (confirmed) {
-                if (confirmed) {
-                    form.dataset.confirmed = 'true';
-                    form.submit();
-                }
-            });
-        });
-    </script>
-}
+</div>

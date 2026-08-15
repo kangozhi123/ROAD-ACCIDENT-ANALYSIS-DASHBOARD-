@@ -1,3 +1,11 @@
+@{
+    var fullName = User.Identity?.Name ?? "Officer";
+    var initials = string.Concat(
+        fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Take(2)
+                .Select(part => char.ToUpperInvariant(part[0])));
+    var currentPage = ViewContext.RouteData.Values["page"]?.ToString() ?? string.Empty;
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,24 +15,125 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
-    <header class="app-nav">
-        <div class="app-shell" style="padding-top:0;padding-bottom:0;">
-            <a class="navbar-brand" asp-page="/Dashboard">Road Accident Analysis</a>
-        </div>
-    </header>
+<div class="shell">
 
-    <main class="app-shell">
-        @RenderBody()
-    </main>
+    <aside class="sidebar">
+        <a class="sidebar__logo" asp-page="/Dashboard">
+            <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                <path d="M24 3 6 10v13c0 11 7.7 19.9 18 22 10.3-2.1 18-11 18-22V10L24 3Z"
+                      fill="rgba(255,255,255,.16)" stroke="#fff" stroke-width="2.5" stroke-linejoin="round" />
+                <path d="M24 14v20M17 20h14M15 27h18" stroke="#fff" stroke-width="2.5" stroke-linecap="round" />
+            </svg>
+            <span>Road Accident<br />Analysis</span>
+        </a>
 
-    <script src="~/lib/sweetalert2/sweetalert2.all.min.js"></script>
-    <script src="~/js/notify.js" asp-append-version="true"></script>
+        <nav class="sidebar__nav">
+            <a class="nav-item @(currentPage == "/Dashboard" ? "is-active" : "")" asp-page="/Dashboard">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="3" width="7" height="9" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" />
+                    <rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="16" width="7" height="5" rx="1" />
+                </svg>
+                Dashboard
+            </a>
 
-    @if (TempData["Toast"] is string toast)
-    {
-        <script>notify.toast(@Html.Raw(Json.Serialize(toast)));</script>
-    }
+            <span class="nav-item is-soon" aria-disabled="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 6h18M6 12h12M10 18h4" />
+                </svg>
+                Collisions
+                <span class="nav-item__tag">Soon</span>
+            </span>
 
-    @await RenderSectionAsync("Scripts", required: false)
+            <span class="nav-item is-soon" aria-disabled="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" />
+                </svg>
+                Hotspots
+                <span class="nav-item__tag">Soon</span>
+            </span>
+
+            <span class="nav-item is-soon" aria-disabled="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 12h4l3 8 4-16 3 8h4" />
+                </svg>
+                Severity model
+                <span class="nav-item__tag">Soon</span>
+            </span>
+
+            <span class="nav-item is-soon" aria-disabled="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M14 3v5h5" /><path d="M19 8v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h8l5 5Z" />
+                </svg>
+                Reports
+                <span class="nav-item__tag">Soon</span>
+            </span>
+        </nav>
+
+        <p class="sidebar__foot">
+            Signed in as @fullName<br />
+            @User.FindFirst("ForceNumber")?.Value
+        </p>
+    </aside>
+
+    <div>
+        <header class="topbar">
+            <div class="topbar__greeting">
+                @ViewData["Title"]
+                <small>@User.FindFirst("BranchName")?.Value · @User.FindFirst("CompanyName")?.Value</small>
+            </div>
+
+            <div class="topbar__right">
+                <div class="avatar__meta">
+                    <strong>@fullName</strong>
+                    <span>@User.FindFirst("ForceNumber")?.Value</span>
+                </div>
+
+                <div class="avatar" aria-hidden="true">@initials</div>
+
+                <form method="post" asp-page="/Logout" id="signOutForm">
+                    <button type="submit" class="btn-ghost-brand">Sign out</button>
+                </form>
+            </div>
+        </header>
+
+        <main>
+            @RenderBody()
+        </main>
+    </div>
+
+</div>
+
+<script src="~/lib/sweetalert2/sweetalert2.all.min.js"></script>
+<script src="~/js/notify.js" asp-append-version="true"></script>
+
+@if (TempData["Toast"] is string toast)
+{
+    <script>notify.toast(@Html.Raw(Json.Serialize(toast)));</script>
+}
+
+<script>
+    (function () {
+        var form = document.getElementById('signOutForm');
+        if (!form) return;
+
+        form.addEventListener('submit', function (event) {
+            if (form.dataset.confirmed === 'true') return;
+
+            event.preventDefault();
+            notify.confirm({
+                title: 'Sign out?',
+                text: 'You will need your force number to sign back in.',
+                confirmText: 'Sign out'
+            }).then(function (confirmed) {
+                if (confirmed) {
+                    form.dataset.confirmed = 'true';
+                    form.submit();
+                }
+            });
+        });
+    })();
+</script>
+
+@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
