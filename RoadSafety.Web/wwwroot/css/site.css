@@ -1,3 +1,37 @@
+/* Poppins, self-hosted so the type never falls back on an offline machine.
+   Latin subset only — four weights, about 31KB in total. */
+@font-face {
+    font-family: 'Poppins';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../lib/poppins/poppins-400.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Poppins';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('../lib/poppins/poppins-500.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Poppins';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('../lib/poppins/poppins-600.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Poppins';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../lib/poppins/poppins-700.woff2') format('woff2');
+}
+
 /* ==========================================================================
    Road Accident Analysis — design tokens
    The single source of colour, type and spacing for the whole project.
@@ -23,8 +57,15 @@
     --danger-soft: #FDECEE;
     --warning: #E8A32A;
 
-    --font-sans: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system,
-                 "Helvetica Neue", Arial, sans-serif;
+    /* Solid card fills. Deeper than the brand tones on purpose: white text
+       on --cyan is about 1.9:1 and on --warning about 2.2:1, both unreadable.
+       These all clear 4.5:1, so labels stay legible on a projector. */
+    --fill-amber: #B9770E;
+    --fill-azure: #1F6FD8;
+    --fill-indigo: #3A3FDF;
+    --fill-teal: #0C7C99;
+
+    --font-sans: 'Poppins', "Segoe UI", system-ui, -apple-system, sans-serif;
 
     --shadow-card: 0 24px 60px -20px rgba(23, 32, 58, .28);
     --shadow-btn: 0 8px 20px -6px rgba(36, 120, 232, .55);
@@ -773,42 +814,43 @@ html.nav-collapsed .nav-item.is-active {
     margin-bottom: 1.4rem;
 }
 
+/* Solid brand fill. The colour is the card, not a strip on its edge. */
 .stat {
-    background: var(--surface);
-    border-radius: 14px;
-    padding: 1.15rem 1.3rem;
+    background: var(--accent, var(--azure));
+    color: #fff;
+    border-radius: 16px;
+    padding: 1.25rem 1.35rem;
     display: flex;
     align-items: center;
     gap: 1rem;
-    box-shadow: var(--shadow-soft);
-    border-left: 4px solid var(--accent, var(--azure));
+    box-shadow: 0 14px 30px -20px var(--accent, var(--azure));
 }
 
 .stat__icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
     display: grid;
     place-items: center;
-    background: color-mix(in srgb, var(--accent, var(--azure)) 12%, white);
-    color: var(--accent, var(--azure));
+    background: rgba(255, 255, 255, .2);
+    color: #fff;
     flex: none;
 }
 
 .stat__icon svg {
-    width: 21px;
-    height: 21px;
+    width: 22px;
+    height: 22px;
 }
 
 .stat__label {
-    font-size: .76rem;
-    font-weight: 600;
-    color: var(--slate);
+    font-size: .77rem;
+    font-weight: 500;
+    color: #fff;
     margin-bottom: .1rem;
 }
 
 .stat__value {
-    font-size: 1.55rem;
+    font-size: 1.6rem;
     font-weight: 700;
     letter-spacing: -.02em;
     line-height: 1.1;
@@ -816,7 +858,7 @@ html.nav-collapsed .nav-item.is-active {
 
 .stat__note {
     font-size: .68rem;
-    color: var(--slate);
+    color: rgba(255, 255, 255, .92);
     margin-top: .15rem;
 }
 
