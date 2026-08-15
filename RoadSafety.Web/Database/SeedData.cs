@@ -29,9 +29,9 @@ public static class SeedData
         {
             // A database created before roles existed has the demo account as a
             // plain officer, which would leave nobody able to manage anything.
-            if (seeded.Role != UserRole.SystemAdministrator)
+            if (seeded.RoleId != Role.SystemAdministratorId)
             {
-                seeded.Role = UserRole.SystemAdministrator;
+                seeded.RoleId = Role.SystemAdministratorId;
                 await db.SaveChangesAsync();
             }
 
@@ -48,6 +48,6 @@ public static class SeedData
         "test.officer@police.gov.zm",
         "Password123!",
         "BR-001",
-        UserRole.SystemAdministrator);
+        Role.SystemAdministratorId);
     }
 }

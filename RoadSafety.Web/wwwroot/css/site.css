@@ -1748,3 +1748,33 @@ table.dataTable tbody tr:hover td {
     color: var(--slate);
     margin-top: .15rem;
 }
+
+/* Permission chips ------------------------------------------------------ */
+
+.perm-chip {
+    display: inline-block;
+    margin: 0 .3rem .3rem 0;
+    padding: .18rem .5rem;
+    border-radius: 6px;
+    font-size: .68rem;
+    font-weight: 600;
+    background: #E7F0FE;
+    border: 1px solid #C5DCFB;
+    color: var(--fill-azure);
+    white-space: nowrap;
+}
+
+.perm-chip--none {
+    background: var(--field);
+    border-color: var(--line);
+    color: var(--slate);
+}
+
+.role-choice input[type="checkbox"] {
+    accent-color: var(--azure);
+}
+
+.role-choice:has(input:disabled) {
+    opacity: .7;
+    cursor: default;
+}

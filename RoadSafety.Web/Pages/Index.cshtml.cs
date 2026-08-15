@@ -49,11 +49,16 @@ public class IndexModel : PageModel
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Name, user.FullName),
             new("ForceNumber", user.ForceNumber),
-            new(ClaimTypes.Role, user.Role.ToString()),
+            new(ClaimTypes.Role, user.Role!.Name),
+            new("RoleId", user.RoleId.ToString()),
             new("BranchReferenceNumber", user.BranchReferenceNumber),
             new("BranchName", user.Branch?.Name ?? string.Empty),
             new("CompanyName", user.Branch?.Company?.Name ?? string.Empty)
         };
+
+        // One claim per permission the role grants, so authorization checks
+        // read the permission rather than guessing from the role's name.
+        claims.AddRange(Permissions.For(user.Role!).Select(p => new Claim("perm", p)));
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
 

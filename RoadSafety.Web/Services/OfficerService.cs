@@ -51,7 +51,8 @@ public class OfficerService(AppDbContext db)
                 u.Email,
                 u.Branch!.Name,
                 u.Branch!.Company!.Name,
-                u.Role,
+                u.RoleId,
+                u.Role!.Name,
                 u.CreatedAt))
             .ToListAsync();
 
@@ -72,7 +73,8 @@ public class OfficerService(AppDbContext db)
                 u.Branch!.Name,
                 u.Branch!.CompanyId,
                 u.Branch!.Company!.Name,
-                u.Role,
+                u.RoleId,
+                u.Role!.Name,
                 u.CreatedAt))
             .SingleOrDefaultAsync();
 
@@ -154,9 +156,9 @@ public class OfficerService(AppDbContext db)
     /// <summary>
     /// Moves an officer to a different role.
     /// </summary>
-    public async Task<RoleChangeResult> ChangeRoleAsync(int id, UserRole role, AccessScope scope)
+    public async Task<RoleChangeResult> ChangeRoleAsync(int id, int roleId, AccessScope scope)
     {
-        if (!scope.CanManageOfficers)
+        if (!scope.CanAssignRoles)
         {
             return RoleChangeResult.Forbidden;
         }
@@ -171,12 +173,21 @@ public class OfficerService(AppDbContext db)
             return RoleChangeResult.CannotChangeOwnRole;
         }
 
+        var role = await db.Roles.SingleOrDefaultAsync(r => r.Id == roleId);
+        if (role is null)
+        {
+            return RoleChangeResult.NotFound;
+        }
+
         if (!scope.CanAssign(role))
         {
             return RoleChangeResult.Forbidden;
         }
 
-        var user = await db.Users.SingleOrDefaultAsync(u => u.Id == id);
+        var user = await db.Users
+            .Include(u => u.Role)
+            .SingleOrDefaultAsync(u => u.Id == id);
+
         if (user is null || !scope.Covers(user.BranchReferenceNumber))
         {
             return RoleChangeResult.NotFound;
@@ -185,12 +196,12 @@ public class OfficerService(AppDbContext db)
         // Someone already holding a role you cannot grant is not yours to
         // demote either, or a station administrator could strip a system
         // administrator and take over the station.
-        if (!scope.CanAssign(user.Role))
+        if (!scope.CanAssign(user.Role!))
         {
             return RoleChangeResult.Forbidden;
         }
 
-        user.Role = role;
+        user.RoleId = roleId;
         await db.SaveChangesAsync();
 
         return RoleChangeResult.Success;
@@ -203,6 +214,7 @@ public class OfficerService(AppDbContext db)
     private IQueryable<User> Visible(AccessScope scope)
     {
         var query = db.Users
+            .Include(u => u.Role)
             .Include(u => u.Branch)!.ThenInclude(b => b!.Company)
             .AsQueryable();
 
