@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<Branch> Branches => Set<Branch>();
     public DbSet<Company> Companies => Set<Company>();
+    public DbSet<Role> Roles => Set<Role>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -47,9 +48,10 @@ public class AppDbContext : DbContext
             entity.Property(u => u.PasswordHash).IsRequired();
             entity.Property(u => u.BranchReferenceNumber).IsRequired().HasMaxLength(50);
 
-            // Stored as text so the column reads plainly in the database and
-            // renumbering the enum cannot silently repoint existing rows.
-            entity.Property(u => u.Role).IsRequired().HasMaxLength(30).HasConversion<string>();
+            entity.HasOne(u => u.Role)
+                  .WithMany(r => r.Users)
+                  .HasForeignKey(u => u.RoleId)
+                  .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasIndex(u => u.ForceNumber).IsUnique();
             entity.HasIndex(u => u.Email).IsUnique();
@@ -63,6 +65,14 @@ public class AppDbContext : DbContext
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<Role>(entity =>
+        {
+            entity.Property(r => r.Name).IsRequired().HasMaxLength(60);
+            entity.Property(r => r.Description).IsRequired().HasMaxLength(200);
+
+            entity.HasIndex(r => r.Name).IsUnique();
+        });
+
         SeedLookups(modelBuilder);
     }
 
@@ -73,6 +83,36 @@ public class AppDbContext : DbContext
     /// </summary>
     private static void SeedLookups(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Role>().HasData(
+            new Role
+            {
+                Id = Role.OfficerId,
+                Name = "Officer",
+                Description = "Reads their own station's records. Cannot add or change officers.",
+                IsBuiltIn = true
+            },
+            new Role
+            {
+                Id = Role.StationAdministratorId,
+                Name = "Station administrator",
+                Description = "Adds, edits and removes the officers posted to their own station.",
+                CanManageOfficers = true,
+                CanAssignRoles = true,
+                IsBuiltIn = true
+            },
+            new Role
+            {
+                Id = Role.SystemAdministratorId,
+                Name = "System administrator",
+                Description = "Manages every station, and the roles themselves.",
+                SeesEveryBranch = true,
+                CanManageOfficers = true,
+                CanAssignRoles = true,
+                CanManageRoles = true,
+                IsBuiltIn = true
+            }
+        );
+
         modelBuilder.Entity<Company>().HasData(
             new Company { Id = 1, ReferenceNumber = "CO-001", Code = "ZPS", Name = "Zambia Police Service", RegistrationNumber = "ZPS-1965" },
             new Company { Id = 2, ReferenceNumber = "CO-002", Code = "RTSA", Name = "Road Transport and Safety Agency", RegistrationNumber = "RTSA-2002" }

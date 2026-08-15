@@ -1,6 +1,5 @@
 @page
 @model RoadSafety.Web.Pages.RolesModel
-@using RoadSafety.Web.Models
 @using RoadSafety.Web.ViewModels
 @{
     ViewData["Title"] = "Roles";
@@ -12,42 +11,99 @@
 
 <partial name="_PageHeader" model="@(new PageHeader(
     "Roles",
-    Model.SeesEveryBranch
-        ? "What each role can reach, and who holds it"
-        : $"Roles at {User.FindFirst("BranchName")?.Value}",
-    new[] { new Crumb("Dashboard", "/Dashboard"), new Crumb("Roles") }))" />
-
-<div class="role-cards">
-    @foreach (var role in new[] { UserRole.Officer, UserRole.StationAdministrator, UserRole.SystemAdministrator })
-    {
-        var held = Model.Officers.Count(o => o.Role == role);
-        var grantable = Model.AssignableRoles.Contains(role);
-
-        <article class="role-card @(grantable ? "" : "role-card--locked")">
-            <div class="role-card__head">
-                <span class="role-tag role-tag--@role.ToString().ToLowerInvariant()">@RolesModel.Label(role)</span>
-                @if (!grantable)
-                {
-                    <span class="role-card__lock" title="You cannot assign this role">Not yours to assign</span>
-                }
-            </div>
-
-            <p>@RolesModel.Describes(role)</p>
-
-            <div class="role-card__count">
-                <b>@held</b> @(held == 1 ? "officer" : "officers")
-            </div>
-        </article>
-    }
-</div>
+    Model.CanManageRoles
+        ? "What each role grants, and who holds it"
+        : "What each role grants. Only a system administrator can change them.",
+    new[] { new Crumb("Dashboard", "/Dashboard"), new Crumb("Roles") },
+    ActionText: Model.CanManageRoles ? "New role" : null,
+    ActionModalTarget: Model.CanManageRoles ? "#roleDialog" : null))" />
 
 <section class="card">
     <div class="card__head">
-        <h2 class="card__title">Assign a role</h2>
-        <span class="card__hint">@Model.Officers.Count officers</span>
+        <h2 class="card__title">Roles</h2>
+        <span class="card__hint">@Model.Roles.Count defined</span>
     </div>
 
     <table id="rolesTable" class="table" style="width:100%">
+        <thead>
+            <tr>
+                <th>Role</th>
+                <th>Grants</th>
+                <th>Held by</th>
+                <th class="col-actions">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var role in Model.Roles)
+            {
+                var isMine = role.Id == Model.CurrentRoleId;
+
+                <tr data-role-row="@role.Id">
+                    <td>
+                        <div class="people__name" data-role-name>@role.Name</div>
+                        <div class="people__meta" data-role-desc>@role.Description</div>
+                    </td>
+                    <td data-role-grants>
+                        @if (role.SeesEveryBranch) { <span class="perm-chip">All stations</span> }
+                        @if (role.CanManageOfficers) { <span class="perm-chip">Manage officers</span> }
+                        @if (role.CanAssignRoles) { <span class="perm-chip">Assign roles</span> }
+                        @if (role.CanManageRoles) { <span class="perm-chip">Manage roles</span> }
+                        @if (!role.SeesEveryBranch && !role.CanManageOfficers
+                             && !role.CanAssignRoles && !role.CanManageRoles)
+                        {
+                            <span class="perm-chip perm-chip--none">Read own station</span>
+                        }
+                    </td>
+                    <td data-role-count="@role.HolderCount">
+                        @role.HolderCount @(role.HolderCount == 1 ? "officer" : "officers")
+                    </td>
+                    <td>
+                        <div class="row-actions">
+                            @if (Model.CanManageRoles)
+                            {
+                                <button type="button" class="icon-btn" data-edit-role="@role.Id"
+                                        title="Edit @role.Name" aria-label="Edit @role.Name">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                                    </svg>
+                                </button>
+
+                                @if (!role.IsBuiltIn && !isMine)
+                                {
+                                    <button type="button" class="icon-btn icon-btn--danger"
+                                            data-delete-role="@role.Id" data-name="@role.Name"
+                                            title="Delete @role.Name" aria-label="Delete @role.Name">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+                                        </svg>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="cell-note">@(isMine ? "Yours" : "Built in")</span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="cell-note">View only</span>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</section>
+
+<section class="card" style="margin-top:1.25rem;">
+    <div class="card__head">
+        <h2 class="card__title">Officers</h2>
+        <span class="card__hint">
+            @(Model.SeesEveryBranch ? $"{Model.Officers.Count} across all stations" : $"{Model.Officers.Count} at your station")
+        </span>
+    </div>
+
+    <table id="officerRolesTable" class="table" style="width:100%">
         <thead>
             <tr>
                 <th>Officer</th>
@@ -66,7 +122,7 @@
                                     .Select(part => char.ToUpperInvariant(part[0])));
 
                 var isSelf = officer.Id == Model.CurrentUserId;
-                var beyondReach = !Model.AssignableRoles.Contains(officer.Role);
+                var beyondReach = !Model.AssignableRoles.Any(r => r.Id == officer.RoleId);
 
                 <tr data-row="@officer.Id">
                     <td>
@@ -80,11 +136,7 @@
                     </td>
                     <td>@officer.ForceNumber</td>
                     <td>@officer.BranchName</td>
-                    <td>
-                        <span class="role-tag role-tag--@officer.Role.ToString().ToLowerInvariant()" data-role-tag>
-                            @RolesModel.Label(officer.Role)
-                        </span>
-                    </td>
+                    <td><span class="role-tag" data-role-tag>@officer.RoleName</span></td>
                     <td>
                         @if (isSelf)
                         {
@@ -99,7 +151,7 @@
                             <button type="button" class="btn-ghost-brand"
                                     data-assign="@officer.Id"
                                     data-name="@officer.FullName"
-                                    data-current="@officer.Role">
+                                    data-current="@officer.RoleId">
                                 Change role
                             </button>
                         }
@@ -112,7 +164,7 @@
 
 <form id="antiforgery">@Html.AntiForgeryToken()</form>
 
-@* ── Assign role ────────────────────────────────────────────────────── *@
+@* ── Assign a role to an officer ────────────────────────────────────── *@
 <div class="modal fade" id="assignRole" tabindex="-1" aria-labelledby="assignRoleTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -133,10 +185,10 @@
                         @foreach (var role in Model.AssignableRoles)
                         {
                             <label class="role-choice">
-                                <input type="radio" name="assignRole" value="@role" />
+                                <input type="radio" name="assignRole" value="@role.Id" />
                                 <span>
-                                    <span class="role-choice__name">@RolesModel.Label(role)</span>
-                                    <span class="role-choice__desc">@RolesModel.Describes(role)</span>
+                                    <span class="role-choice__name">@role.Name</span>
+                                    <span class="role-choice__desc">@role.Description</span>
                                 </span>
                             </label>
                         }
@@ -152,6 +204,86 @@
     </div>
 </div>
 
+@if (Model.CanManageRoles)
+{
+    @* ── Create or edit a role ──────────────────────────────────────── *@
+    <div class="modal fade" id="roleDialog" tabindex="-1" aria-labelledby="roleDialogTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="roleForm">
+                    <input type="hidden" id="roleId" value="0" />
+
+                    <div class="modal-header">
+                        <h2 class="modal-title" id="roleDialogTitle">New role</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="alert-brand d-none" id="roleError" role="alert"></div>
+                        <div class="posting-fixed d-none" id="roleLocked">
+                            <span class="posting-fixed__label">Built-in role</span>
+                            <p>The name and description can be changed. What it grants is fixed, so there is always a working role to fall back on.</p>
+                        </div>
+
+                        <div class="field-grid">
+                            <div class="field field--wide">
+                                <label for="roleName">Name</label>
+                                <input id="roleName" required maxlength="60" placeholder="Traffic supervisor" />
+                            </div>
+
+                            <div class="field field--wide">
+                                <label for="roleDescription">Description</label>
+                                <input id="roleDescription" maxlength="200" placeholder="What holding this role means" />
+                            </div>
+                        </div>
+
+                        <p class="field-hint" style="margin:1rem 0 .5rem;">Grants</p>
+
+                        <div class="role-choices">
+                            <label class="role-choice">
+                                <input type="checkbox" id="permBranches" />
+                                <span>
+                                    <span class="role-choice__name">All stations</span>
+                                    <span class="role-choice__desc">Reads and manages every station, not only their own.</span>
+                                </span>
+                            </label>
+
+                            <label class="role-choice">
+                                <input type="checkbox" id="permOfficers" />
+                                <span>
+                                    <span class="role-choice__name">Manage officers</span>
+                                    <span class="role-choice__desc">Adds, edits and removes officers.</span>
+                                </span>
+                            </label>
+
+                            <label class="role-choice">
+                                <input type="checkbox" id="permAssign" />
+                                <span>
+                                    <span class="role-choice__name">Assign roles</span>
+                                    <span class="role-choice__desc">Moves officers between roles.</span>
+                                </span>
+                            </label>
+
+                            <label class="role-choice">
+                                <input type="checkbox" id="permRoles" />
+                                <span>
+                                    <span class="role-choice__name">Manage roles</span>
+                                    <span class="role-choice__desc">Creates, edits and deletes the roles themselves.</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn-ghost-brand" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn-primary-brand" id="roleSubmit">Create role</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
 @section Scripts {
     <partial name="_LibScripts" />
 
@@ -159,81 +291,184 @@
         (function () {
             var token = document.querySelector('#antiforgery input[name="__RequestVerificationToken"]').value;
 
-            var table = new DataTable('#rolesTable', {
+            function post(handler, body) {
+                var data = new FormData();
+                Object.keys(body).forEach(function (k) { data.append(k, body[k]); });
+
+                return fetch('/Roles?handler=' + handler, {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': token },
+                    body: data
+                }).then(function (response) {
+                    return response.json().catch(function () { return {}; })
+                        .then(function (payload) {
+                            if (!response.ok) throw new Error(payload.error || 'That did not work.');
+                            return payload;
+                        });
+                });
+            }
+
+            new DataTable('#rolesTable', {
+                order: [[0, 'asc']],
+                columnDefs: [{ orderable: false, targets: [1, 3] }, { searchable: false, targets: 3 }]
+            });
+
+            var officerTable = new DataTable('#officerRolesTable', {
                 order: [[0, 'asc']],
                 columnDefs: [{ orderable: false, targets: [0, 4] }, { searchable: false, targets: 4 }]
             });
 
-            var modal = new bootstrap.Modal(document.getElementById('assignRole'));
-            var form = document.getElementById('assignForm');
-            var error = document.getElementById('assignError');
+            /* ── Assign a role to an officer ────────────────────────── */
+            var assignModal = new bootstrap.Modal(document.getElementById('assignRole'));
+            var assignForm = document.getElementById('assignForm');
+            var assignError = document.getElementById('assignError');
 
             document.querySelectorAll('[data-assign]').forEach(function (button) {
                 button.addEventListener('click', function () {
-                    error.classList.add('d-none');
+                    assignError.classList.add('d-none');
                     document.getElementById('assignId').value = button.dataset.assign;
                     document.getElementById('assignName').textContent = button.dataset.name;
 
-                    // Start on the role they already hold, so saving without a
-                    // change is a no-op rather than a surprise.
-                    var current = form.querySelector('input[value="' + button.dataset.current + '"]');
+                    var current = assignForm.querySelector('input[value="' + button.dataset.current + '"]');
                     if (current) current.checked = true;
 
-                    modal.show();
+                    assignModal.show();
                 });
             });
 
-            form.addEventListener('submit', function (event) {
+            assignForm.addEventListener('submit', function (event) {
                 event.preventDefault();
 
-                var chosen = form.querySelector('input[name="assignRole"]:checked');
+                var chosen = assignForm.querySelector('input[name="assignRole"]:checked');
                 if (!chosen) {
-                    error.textContent = 'Choose a role first.';
-                    error.classList.remove('d-none');
+                    assignError.textContent = 'Choose a role first.';
+                    assignError.classList.remove('d-none');
                     return;
                 }
 
                 var id = document.getElementById('assignId').value;
-                var body = new FormData();
-                body.append('id', id);
-                body.append('role', chosen.value);
 
-                fetch('/Roles?handler=Assign', {
-                    method: 'POST',
-                    headers: { 'RequestVerificationToken': token },
-                    body: body
-                })
-                    .then(function (response) {
-                        return response.json().catch(function () { return {}; })
-                            .then(function (payload) {
-                                if (!response.ok) throw new Error(payload.error || 'That did not work.');
-                                return payload;
-                            });
-                    })
+                post('Assign', { id: id, roleId: chosen.value })
                     .then(function (payload) {
-                        modal.hide();
-                        repaintRole(id, payload.role, payload.label);
+                        assignModal.hide();
+
+                        var tr = document.querySelector('[data-row="' + id + '"]');
+                        tr.querySelector('[data-role-tag]').textContent = payload.label;
+                        tr.querySelector('[data-assign]').dataset.current = payload.roleId;
+                        officerTable.row(tr).invalidate().draw(false);
+
                         notify.success(payload.message);
                     })
                     .catch(function (e) {
-                        error.textContent = e.message;
-                        error.classList.remove('d-none');
+                        assignError.textContent = e.message;
+                        assignError.classList.remove('d-none');
                     });
             });
 
-            /** Updates the tag and the button's memory of the current role. */
-            function repaintRole(id, role, label) {
-                var tr = document.querySelector('[data-row="' + id + '"]');
-                if (!tr) return;
+            /* ── Create, edit and delete roles ──────────────────────── */
+            var dialogEl = document.getElementById('roleDialog');
+            if (!dialogEl) return;
 
-                var tag = tr.querySelector('[data-role-tag]');
-                tag.textContent = label;
-                tag.className = 'role-tag role-tag--' + role.toLowerCase();
+            var roleModal = new bootstrap.Modal(dialogEl);
+            var roleForm = document.getElementById('roleForm');
+            var roleError = document.getElementById('roleError');
+            var roleLocked = document.getElementById('roleLocked');
+            var perms = {
+                seesEveryBranch: document.getElementById('permBranches'),
+                canManageOfficers: document.getElementById('permOfficers'),
+                canAssignRoles: document.getElementById('permAssign'),
+                canManageRoles: document.getElementById('permRoles')
+            };
 
-                var button = tr.querySelector('[data-assign]');
-                if (button) button.dataset.current = role;
+            function openDialog(role) {
+                roleError.classList.add('d-none');
+                roleLocked.classList.toggle('d-none', !(role && role.isBuiltIn));
 
-                table.row(tr).invalidate().draw(false);
+                document.getElementById('roleId').value = role ? role.id : 0;
+                document.getElementById('roleName').value = role ? role.name : '';
+                document.getElementById('roleDescription').value = role ? role.description : '';
+
+                Object.keys(perms).forEach(function (key) {
+                    perms[key].checked = role ? role[key] : false;
+                    // A built-in role's grants are fixed, so the boxes are shown
+                    // as they are but cannot be moved.
+                    perms[key].disabled = !!(role && role.isBuiltIn);
+                });
+
+                document.getElementById('roleDialogTitle').textContent = role ? 'Edit role' : 'New role';
+                document.getElementById('roleSubmit').textContent = role ? 'Save changes' : 'Create role';
+
+                roleModal.show();
+            }
+
+            dialogEl.addEventListener('show.bs.modal', function (event) {
+                // Opened by the header button rather than a row: start blank.
+                if (!event.relatedTarget) return;
+                openDialog(null);
+            });
+
+            document.querySelectorAll('[data-edit-role]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    fetch('/Roles?handler=Role&id=' + button.dataset.editRole)
+                        .then(function (r) {
+                            if (!r.ok) throw new Error('That role no longer exists.');
+                            return r.json();
+                        })
+                        .then(openDialog)
+                        .catch(function (e) { notify.failure(e.message); });
+                });
+            });
+
+            roleForm.addEventListener('submit', function (event) {
+                event.preventDefault();
+
+                var id = parseInt(document.getElementById('roleId').value, 10);
+
+                post(id > 0 ? 'UpdateRole' : 'CreateRole', {
+                    id: id,
+                    name: document.getElementById('roleName').value,
+                    description: document.getElementById('roleDescription').value,
+                    seesEveryBranch: perms.seesEveryBranch.checked,
+                    canManageOfficers: perms.canManageOfficers.checked,
+                    canAssignRoles: perms.canAssignRoles.checked,
+                    canManageRoles: perms.canManageRoles.checked
+                })
+                    .then(function (payload) {
+                        roleModal.hide();
+                        sessionStorage.setItem('roleToast', payload.message);
+                        // A new or changed role affects both tables and the
+                        // assign dialog's choices, so the page is reloaded.
+                        window.location.reload();
+                    })
+                    .catch(function (e) {
+                        roleError.textContent = e.message;
+                        roleError.classList.remove('d-none');
+                    });
+            });
+
+            document.querySelectorAll('[data-delete-role]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    notify.confirm({
+                        title: 'Delete ' + button.dataset.name + '?',
+                        text: 'Officers holding it must be moved to another role first.',
+                        confirmText: 'Delete role'
+                    }).then(function (confirmed) {
+                        if (!confirmed) return;
+
+                        post('DeleteRole', { id: button.dataset.deleteRole })
+                            .then(function (payload) {
+                                sessionStorage.setItem('roleToast', payload.message);
+                                window.location.reload();
+                            })
+                            .catch(function (e) { notify.failure(e.message); });
+                    });
+                });
+            });
+
+            var pending = sessionStorage.getItem('roleToast');
+            if (pending) {
+                sessionStorage.removeItem('roleToast');
+                notify.success(pending);
             }
         })();
     </script>

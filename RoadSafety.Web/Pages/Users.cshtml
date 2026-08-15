@@ -52,7 +52,7 @@
                     <td>@officer.ForceNumber</td>
                     <td>@officer.BranchName</td>
                     <td>@officer.CompanyName</td>
-                    <td><span class="role-tag role-tag--@officer.Role.ToString().ToLowerInvariant()">@RoleLabel(officer.Role)</span></td>
+                    <td><span class="role-tag role-tag--@officer.RoleId">@officer.RoleName</span></td>
                     <td data-order="@officer.CreatedAt.ToString("s")">@officer.CreatedAt.ToString("d MMM yyyy")</td>
                     <td>
                         <div class="row-actions">
@@ -317,15 +317,6 @@
         </div>
     </div>
 </div>
-
-@functions {
-    static string RoleLabel(RoadSafety.Web.Models.UserRole role) => role switch
-    {
-        RoadSafety.Web.Models.UserRole.SystemAdministrator => "System admin",
-        RoadSafety.Web.Models.UserRole.StationAdministrator => "Station admin",
-        _ => "Officer"
-    };
-}
 
 @section Scripts {
     <partial name="_LibScripts" />

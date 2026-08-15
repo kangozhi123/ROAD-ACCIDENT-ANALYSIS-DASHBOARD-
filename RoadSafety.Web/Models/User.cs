@@ -15,6 +15,7 @@ public class User
     /// Defaults to the narrowest role, so an account created by any route
     /// starts able to see only its own station.
     /// </summary>
-    public UserRole Role { get; set; } = UserRole.Officer;
+    public int RoleId { get; set; } = Models.Role.OfficerId;
+    public Role? Role { get; set; }
     public DateTime CreatedAt { get; set; }
 }

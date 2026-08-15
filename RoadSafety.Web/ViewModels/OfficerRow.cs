@@ -1,5 +1,3 @@
-using RoadSafety.Web.Models;
-
 namespace RoadSafety.Web.ViewModels;
 
 /// <summary>A row in the officers table.</summary>
@@ -10,5 +8,6 @@ public record OfficerRow(
     string Email,
     string BranchName,
     string CompanyName,
-    UserRole Role,
+    int RoleId,
+    string RoleName,
     DateTime CreatedAt);

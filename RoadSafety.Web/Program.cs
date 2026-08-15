@@ -17,6 +17,7 @@ builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<OfficerService>();
 builder.Services.AddScoped<NumberGenerator>();
+builder.Services.AddScoped<RoleService>();
 
 // Lets fetch() send the antiforgery token in a header, so the row actions
 // can post without a full form round-trip.
@@ -34,11 +35,12 @@ builder.Services
 
 builder.Services.AddAuthorization(options =>
 {
-    // Pages that change who can do what. The services re-check the scope
-    // themselves; this keeps the page out of reach in the first place.
-    options.AddPolicy("ManageOfficers", policy => policy.RequireRole(
-        nameof(UserRole.StationAdministrator),
-        nameof(UserRole.SystemAdministrator)));
+    // Keyed on the permission rather than the role's name, so a role added
+    // later works without touching this. The services re-check the scope
+    // themselves; these keep the pages out of reach in the first place.
+    options.AddPolicy("ManageOfficers", p => p.RequireClaim("perm", Permissions.ManageOfficers));
+    options.AddPolicy("AssignRoles", p => p.RequireClaim("perm", Permissions.AssignRoles));
+    options.AddPolicy("ManageRoles", p => p.RequireClaim("perm", Permissions.ManageRoles));
 });
 
 var app = builder.Build();

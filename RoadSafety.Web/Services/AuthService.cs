@@ -30,7 +30,7 @@ public class AuthService
     string email, 
     string password, 
     string branchReferenceNumber,
-    UserRole role = UserRole.Officer)
+    int roleId = Role.OfficerId)
     {
         forceNumber = forceNumber.Trim();
         email = email.Trim();
@@ -57,7 +57,7 @@ public class AuthService
             ForceNumber = forceNumber,
             Email = email,
             BranchReferenceNumber = branchReferenceNumber,
-            Role = role,
+            RoleId = roleId,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -74,6 +74,7 @@ public class AuthService
         forceNumber = forceNumber.Trim();
 
         var user = await _db.Users
+            .Include(u => u.Role)
             .Include(u => u.Branch)
                 .ThenInclude(b => b!.Company)
             .SingleOrDefaultAsync(u => u.ForceNumber == forceNumber);
