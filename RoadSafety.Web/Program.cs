@@ -32,7 +32,14 @@ builder.Services
         options.SlidingExpiration = true;
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // Pages that change who can do what. The services re-check the scope
+    // themselves; this keeps the page out of reach in the first place.
+    options.AddPolicy("ManageOfficers", policy => policy.RequireRole(
+        nameof(UserRole.StationAdministrator),
+        nameof(UserRole.SystemAdministrator)));
+});
 
 var app = builder.Build();
 

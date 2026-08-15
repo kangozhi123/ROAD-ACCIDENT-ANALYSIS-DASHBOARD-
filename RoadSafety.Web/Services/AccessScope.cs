@@ -33,6 +33,12 @@ public record AccessScope(int UserId, UserRole Role, string BranchReferenceNumbe
             ? requested.Trim()
             : BranchReferenceNumber;
 
+    public IReadOnlyList<UserRole> AssignableRoles => SeesEveryBranch
+        ? [UserRole.Officer, UserRole.StationAdministrator, UserRole.SystemAdministrator]
+        : [UserRole.Officer, UserRole.StationAdministrator];
+
+    public bool CanAssign(UserRole role) => AssignableRoles.Contains(role);
+
     public static AccessScope From(ClaimsPrincipal principal)
     {
         _ = int.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier), out var userId);

@@ -56,6 +56,16 @@
             Officers
         </a>
 
+        @if (User.IsInRole("StationAdministrator") || User.IsInRole("SystemAdministrator"))
+        {
+            <a class="nav-item @(currentPage == "/Roles" ? "is-active" : "")" asp-page="/Roles" title="Roles">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 3 4 6.5v5c0 5 3.4 8.9 8 10 4.6-1.1 8-5 8-10v-5L12 3Z" /><path d="m9 12 2 2 4-4" />
+                </svg>
+                Roles
+            </a>
+        }
+
         <span class="nav-item is-soon" aria-disabled="true" title="Collisions — not built yet">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M3 6h18M6 12h12M10 18h4" />

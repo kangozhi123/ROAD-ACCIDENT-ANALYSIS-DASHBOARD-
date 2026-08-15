@@ -1,0 +1,240 @@
+@page
+@model RoadSafety.Web.Pages.RolesModel
+@using RoadSafety.Web.Models
+@using RoadSafety.Web.ViewModels
+@{
+    ViewData["Title"] = "Roles";
+}
+
+@section Styles {
+    <partial name="_LibStyles" />
+}
+
+<partial name="_PageHeader" model="@(new PageHeader(
+    "Roles",
+    Model.SeesEveryBranch
+        ? "What each role can reach, and who holds it"
+        : $"Roles at {User.FindFirst("BranchName")?.Value}",
+    new[] { new Crumb("Dashboard", "/Dashboard"), new Crumb("Roles") }))" />
+
+<div class="role-cards">
+    @foreach (var role in new[] { UserRole.Officer, UserRole.StationAdministrator, UserRole.SystemAdministrator })
+    {
+        var held = Model.Officers.Count(o => o.Role == role);
+        var grantable = Model.AssignableRoles.Contains(role);
+
+        <article class="role-card @(grantable ? "" : "role-card--locked")">
+            <div class="role-card__head">
+                <span class="role-tag role-tag--@role.ToString().ToLowerInvariant()">@RolesModel.Label(role)</span>
+                @if (!grantable)
+                {
+                    <span class="role-card__lock" title="You cannot assign this role">Not yours to assign</span>
+                }
+            </div>
+
+            <p>@RolesModel.Describes(role)</p>
+
+            <div class="role-card__count">
+                <b>@held</b> @(held == 1 ? "officer" : "officers")
+            </div>
+        </article>
+    }
+</div>
+
+<section class="card">
+    <div class="card__head">
+        <h2 class="card__title">Assign a role</h2>
+        <span class="card__hint">@Model.Officers.Count officers</span>
+    </div>
+
+    <table id="rolesTable" class="table" style="width:100%">
+        <thead>
+            <tr>
+                <th>Officer</th>
+                <th>Force number</th>
+                <th>Station</th>
+                <th>Role</th>
+                <th class="col-actions">Change</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var officer in Model.Officers)
+            {
+                var initials = string.Concat(
+                    officer.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                                    .Take(2)
+                                    .Select(part => char.ToUpperInvariant(part[0])));
+
+                var isSelf = officer.Id == Model.CurrentUserId;
+                var beyondReach = !Model.AssignableRoles.Contains(officer.Role);
+
+                <tr data-row="@officer.Id">
+                    <td>
+                        <div class="cell-person">
+                            <span class="people__avatar" aria-hidden="true">@initials</span>
+                            <span>
+                                <span class="people__name">@officer.FullName</span>
+                                <span class="people__meta">@officer.Email</span>
+                            </span>
+                        </div>
+                    </td>
+                    <td>@officer.ForceNumber</td>
+                    <td>@officer.BranchName</td>
+                    <td>
+                        <span class="role-tag role-tag--@officer.Role.ToString().ToLowerInvariant()" data-role-tag>
+                            @RolesModel.Label(officer.Role)
+                        </span>
+                    </td>
+                    <td>
+                        @if (isSelf)
+                        {
+                            <span class="cell-note">Your own account</span>
+                        }
+                        else if (beyondReach)
+                        {
+                            <span class="cell-note">Above your role</span>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn-ghost-brand"
+                                    data-assign="@officer.Id"
+                                    data-name="@officer.FullName"
+                                    data-current="@officer.Role">
+                                Change role
+                            </button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</section>
+
+<form id="antiforgery">@Html.AntiForgeryToken()</form>
+
+@* ── Assign role ────────────────────────────────────────────────────── *@
+<div class="modal fade" id="assignRole" tabindex="-1" aria-labelledby="assignRoleTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="assignForm">
+                <input type="hidden" id="assignId" />
+
+                <div class="modal-header">
+                    <h2 class="modal-title" id="assignRoleTitle">Change role</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="alert-brand d-none" id="assignError" role="alert"></div>
+
+                    <p class="assign-who">Choosing a role for <b id="assignName"></b>.</p>
+
+                    <div class="role-choices">
+                        @foreach (var role in Model.AssignableRoles)
+                        {
+                            <label class="role-choice">
+                                <input type="radio" name="assignRole" value="@role" />
+                                <span>
+                                    <span class="role-choice__name">@RolesModel.Label(role)</span>
+                                    <span class="role-choice__desc">@RolesModel.Describes(role)</span>
+                                </span>
+                            </label>
+                        }
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-ghost-brand" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-primary-brand">Save role</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_LibScripts" />
+
+    <script>
+        (function () {
+            var token = document.querySelector('#antiforgery input[name="__RequestVerificationToken"]').value;
+
+            var table = new DataTable('#rolesTable', {
+                order: [[0, 'asc']],
+                columnDefs: [{ orderable: false, targets: [0, 4] }, { searchable: false, targets: 4 }]
+            });
+
+            var modal = new bootstrap.Modal(document.getElementById('assignRole'));
+            var form = document.getElementById('assignForm');
+            var error = document.getElementById('assignError');
+
+            document.querySelectorAll('[data-assign]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    error.classList.add('d-none');
+                    document.getElementById('assignId').value = button.dataset.assign;
+                    document.getElementById('assignName').textContent = button.dataset.name;
+
+                    // Start on the role they already hold, so saving without a
+                    // change is a no-op rather than a surprise.
+                    var current = form.querySelector('input[value="' + button.dataset.current + '"]');
+                    if (current) current.checked = true;
+
+                    modal.show();
+                });
+            });
+
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+
+                var chosen = form.querySelector('input[name="assignRole"]:checked');
+                if (!chosen) {
+                    error.textContent = 'Choose a role first.';
+                    error.classList.remove('d-none');
+                    return;
+                }
+
+                var id = document.getElementById('assignId').value;
+                var body = new FormData();
+                body.append('id', id);
+                body.append('role', chosen.value);
+
+                fetch('/Roles?handler=Assign', {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': token },
+                    body: body
+                })
+                    .then(function (response) {
+                        return response.json().catch(function () { return {}; })
+                            .then(function (payload) {
+                                if (!response.ok) throw new Error(payload.error || 'That did not work.');
+                                return payload;
+                            });
+                    })
+                    .then(function (payload) {
+                        modal.hide();
+                        repaintRole(id, payload.role, payload.label);
+                        notify.success(payload.message);
+                    })
+                    .catch(function (e) {
+                        error.textContent = e.message;
+                        error.classList.remove('d-none');
+                    });
+            });
+
+            /** Updates the tag and the button's memory of the current role. */
+            function repaintRole(id, role, label) {
+                var tr = document.querySelector('[data-row="' + id + '"]');
+                if (!tr) return;
+
+                var tag = tr.querySelector('[data-role-tag]');
+                tag.textContent = label;
+                tag.className = 'role-tag role-tag--' + role.toLowerCase();
+
+                var button = tr.querySelector('[data-assign]');
+                if (button) button.dataset.current = role;
+
+                table.row(tr).invalidate().draw(false);
+            }
+        })();
+    </script>
+}

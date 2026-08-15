@@ -195,7 +195,122 @@ public class OfficerServiceTests
         Assert.Equal(UserRole.Officer, (await db.Users.SingleAsync(u => u.Id == id)).Role);
     }
 
+
+    // ── Role assignment ────────────────────────────────────────────────
+
+    [Fact]
+    public async Task A_station_administrator_can_promote_someone_at_their_station()
+    {
+        using var db = CreateContext();
+        var admin = await AddOfficerAsync(db, "AD-00001", "ad@police.gov.zm", Kitwe, UserRole.StationAdministrator);
+        var target = await AddOfficerAsync(db, "TG-00001", "tg@police.gov.zm", Kitwe);
+        var officers = new OfficerService(db);
+
+        var result = await officers.ChangeRoleAsync(
+            target, UserRole.StationAdministrator, Scope(admin, UserRole.StationAdministrator, Kitwe));
+
+        Assert.Equal(RoleChangeResult.Success, result);
+        Assert.Equal(UserRole.StationAdministrator, (await db.Users.SingleAsync(u => u.Id == target)).Role);
+    }
+
+    [Fact]
+    public async Task A_station_administrator_cannot_grant_system_administrator()
+    {
+        using var db = CreateContext();
+        var admin = await AddOfficerAsync(db, "AD-00002", "ad2@police.gov.zm", Kitwe, UserRole.StationAdministrator);
+        var target = await AddOfficerAsync(db, "TG-00002", "tg2@police.gov.zm", Kitwe);
+        var officers = new OfficerService(db);
+
+        // A role nobody can grant is a role nobody can grant themselves.
+        var result = await officers.ChangeRoleAsync(
+            target, UserRole.SystemAdministrator, Scope(admin, UserRole.StationAdministrator, Kitwe));
+
+        Assert.Equal(RoleChangeResult.Forbidden, result);
+        Assert.Equal(UserRole.Officer, (await db.Users.SingleAsync(u => u.Id == target)).Role);
+    }
+
+    [Fact]
+    public async Task A_station_administrator_cannot_demote_a_system_administrator()
+    {
+        using var db = CreateContext();
+        var admin = await AddOfficerAsync(db, "AD-00003", "ad3@police.gov.zm", Kitwe, UserRole.StationAdministrator);
+        var boss = await AddOfficerAsync(db, "BS-00001", "bs@police.gov.zm", Kitwe, UserRole.SystemAdministrator);
+        var officers = new OfficerService(db);
+
+        // Otherwise they could strip the account that outranks them.
+        var result = await officers.ChangeRoleAsync(
+            boss, UserRole.Officer, Scope(admin, UserRole.StationAdministrator, Kitwe));
+
+        Assert.Equal(RoleChangeResult.Forbidden, result);
+        Assert.Equal(UserRole.SystemAdministrator, (await db.Users.SingleAsync(u => u.Id == boss)).Role);
+    }
+
+    [Fact]
+    public async Task Nobody_changes_their_own_role()
+    {
+        using var db = CreateContext();
+        var admin = await AddOfficerAsync(db, "AD-00004", "ad4@police.gov.zm", Kitwe, UserRole.StationAdministrator);
+        var officers = new OfficerService(db);
+
+        var result = await officers.ChangeRoleAsync(
+            admin, UserRole.SystemAdministrator, Scope(admin, UserRole.StationAdministrator, Kitwe));
+
+        Assert.Equal(RoleChangeResult.CannotChangeOwnRole, result);
+    }
+
+    [Fact]
+    public async Task A_role_cannot_be_changed_at_another_station()
+    {
+        using var db = CreateContext();
+        var admin = await AddOfficerAsync(db, "AD-00005", "ad5@police.gov.zm", Kitwe, UserRole.StationAdministrator);
+        var theirs = await AddOfficerAsync(db, "WU-00099", "wu99@police.gov.zm", Wusakile);
+        var officers = new OfficerService(db);
+
+        var result = await officers.ChangeRoleAsync(
+            theirs, UserRole.StationAdministrator, Scope(admin, UserRole.StationAdministrator, Kitwe));
+
+        Assert.Equal(RoleChangeResult.NotFound, result);
+    }
+
+    [Fact]
+    public async Task A_plain_officer_cannot_assign_roles()
+    {
+        using var db = CreateContext();
+        var me = await AddOfficerAsync(db, "PO-00001", "po@police.gov.zm", Kitwe);
+        var other = await AddOfficerAsync(db, "PO-00002", "po2@police.gov.zm", Kitwe);
+        var officers = new OfficerService(db);
+
+        var result = await officers.ChangeRoleAsync(
+            other, UserRole.StationAdministrator, Scope(me, UserRole.Officer, Kitwe));
+
+        Assert.Equal(RoleChangeResult.Forbidden, result);
+    }
+
+    [Fact]
+    public async Task A_system_administrator_can_grant_every_role()
+    {
+        using var db = CreateContext();
+        var target = await AddOfficerAsync(db, "TG-00003", "tg3@police.gov.zm", Wusakile);
+        var officers = new OfficerService(db);
+
+        Assert.Equal(RoleChangeResult.Success,
+            await officers.ChangeRoleAsync(target, UserRole.SystemAdministrator, SystemAdmin()));
+        Assert.Equal(UserRole.SystemAdministrator, (await db.Users.SingleAsync(u => u.Id == target)).Role);
+    }
+
+    [Fact]
+    public void Assignable_roles_stop_short_of_the_callers_own_ceiling()
+    {
+        var station = Scope(1, UserRole.StationAdministrator, Kitwe);
+        var system = Scope(1, UserRole.SystemAdministrator, Kitwe);
+
+        Assert.DoesNotContain(UserRole.SystemAdministrator, station.AssignableRoles);
+        Assert.Contains(UserRole.StationAdministrator, station.AssignableRoles);
+        Assert.Equal(3, system.AssignableRoles.Count);
+    }
+
     // ── The rules that already held ────────────────────────────────────
+
 
     [Fact]
     public async Task An_officer_can_be_fetched_by_id_with_station_and_organisation()

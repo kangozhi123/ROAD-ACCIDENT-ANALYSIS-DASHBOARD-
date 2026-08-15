@@ -14,6 +14,14 @@ public enum OfficerUpdateResult
     Forbidden
 }
 
+public enum RoleChangeResult
+{
+    Success,
+    NotFound,
+    Forbidden,
+    CannotChangeOwnRole
+}
+
 public enum OfficerDeleteResult
 {
     Success,
@@ -141,6 +149,51 @@ public class OfficerService(AppDbContext db)
         db.Users.Remove(user);
         await db.SaveChangesAsync();
         return OfficerDeleteResult.Success;
+    }
+
+    /// <summary>
+    /// Moves an officer to a different role.
+    /// </summary>
+    public async Task<RoleChangeResult> ChangeRoleAsync(int id, UserRole role, AccessScope scope)
+    {
+        if (!scope.CanManageOfficers)
+        {
+            return RoleChangeResult.Forbidden;
+        }
+
+        // Checked before the role itself: this rule holds whichever role was
+        // asked for, so it is the honest reason to report. It stops a station
+        // administrator promoting themselves, and stops the last system
+        // administrator demoting themselves out of the only account that
+        // could undo it.
+        if (id == scope.UserId)
+        {
+            return RoleChangeResult.CannotChangeOwnRole;
+        }
+
+        if (!scope.CanAssign(role))
+        {
+            return RoleChangeResult.Forbidden;
+        }
+
+        var user = await db.Users.SingleOrDefaultAsync(u => u.Id == id);
+        if (user is null || !scope.Covers(user.BranchReferenceNumber))
+        {
+            return RoleChangeResult.NotFound;
+        }
+
+        // Someone already holding a role you cannot grant is not yours to
+        // demote either, or a station administrator could strip a system
+        // administrator and take over the station.
+        if (!scope.CanAssign(user.Role))
+        {
+            return RoleChangeResult.Forbidden;
+        }
+
+        user.Role = role;
+        await db.SaveChangesAsync();
+
+        return RoleChangeResult.Success;
     }
 
     /// <summary>

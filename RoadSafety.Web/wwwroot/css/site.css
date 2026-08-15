@@ -1638,3 +1638,113 @@ table.dataTable tbody tr:hover td {
     line-height: 1.55;
     color: var(--slate);
 }
+
+/* Roles page ------------------------------------------------------------ */
+
+.role-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.1rem;
+    margin-bottom: 1.4rem;
+}
+
+.role-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 1.2rem 1.3rem;
+    box-shadow: var(--shadow-soft);
+}
+
+.role-card--locked {
+    background: var(--field);
+}
+
+.role-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .6rem;
+    margin-bottom: .8rem;
+}
+
+.role-card__lock {
+    font-size: .68rem;
+    font-weight: 600;
+    color: var(--slate);
+}
+
+.role-card p {
+    font-size: .84rem;
+    line-height: 1.6;
+    color: var(--slate);
+    margin: 0 0 1rem;
+}
+
+.role-card__count {
+    font-size: .8rem;
+    color: var(--slate);
+}
+
+.role-card__count b {
+    font-size: 1.15rem;
+    color: var(--ink);
+}
+
+.cell-note {
+    font-size: .78rem;
+    color: var(--slate);
+    font-style: italic;
+}
+
+.assign-who {
+    font-size: .9rem;
+    margin: 0 0 1rem;
+}
+
+.role-choices {
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+}
+
+.role-choice {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    padding: .85rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-field);
+    cursor: pointer;
+    transition: border-color .16s ease, background .16s ease;
+}
+
+.role-choice:hover {
+    border-color: var(--azure);
+    background: var(--field);
+}
+
+.role-choice input {
+    margin-top: .25rem;
+    accent-color: var(--azure);
+    flex: none;
+}
+
+.role-choice:has(input:checked) {
+    border-color: var(--azure);
+    background: #F2F7FE;
+}
+
+.role-choice__name {
+    display: block;
+    font-size: .89rem;
+    font-weight: 700;
+}
+
+.role-choice__desc {
+    display: block;
+    font-size: .78rem;
+    line-height: 1.55;
+    color: var(--slate);
+    margin-top: .15rem;
+}
