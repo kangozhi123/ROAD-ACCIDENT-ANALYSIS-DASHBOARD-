@@ -306,7 +306,7 @@
             var token = document.querySelector('#antiforgery input[name="__RequestVerificationToken"]').value;
 
             /* ── Officers table ─────────────────────────────────────── */
-            new DataTable('#officersTable', {
+            var table = new DataTable('#officersTable', {
                 order: [[4, 'desc']],
                 columnDefs: [
                     { orderable: false, targets: [0, 5] },
@@ -376,7 +376,7 @@
                             row('Registered', new Date(o.createdAt).toLocaleDateString());
                             viewModal.show();
                         })
-                        .catch(function (e) { notify.error(e.message); });
+                        .catch(function (e) { notify.failure(e.message); });
                 });
             });
 
@@ -412,29 +412,58 @@
                             fillBranches(editBranch, o.companyId, o.branchReferenceNumber);
                             editModal.show();
                         })
-                        .catch(function (e) { notify.error(e.message); });
+                        .catch(function (e) { notify.failure(e.message); });
                 });
             });
 
             editForm.addEventListener('submit', function (event) {
                 event.preventDefault();
 
+                var id = document.getElementById('editId').value;
+
                 post('Update', {
-                    id: document.getElementById('editId').value,
+                    id: id,
                     fullName: document.getElementById('editFullName').value,
                     email: document.getElementById('editEmail').value,
                     branchReferenceNumber: editBranch.value
                 })
                     .then(function (payload) {
                         editModal.hide();
-                        sessionStorage.setItem('officerToast', payload.message);
-                        window.location.reload();
+                        rewriteRow(id, payload.officer);
+                        notify.success(payload.message);
                     })
                     .catch(function (e) {
+                        // The dialog is open and the user is looking at it, so
+                        // the message belongs beside the fields, not in a toast.
                         editError.textContent = e.message;
                         editError.classList.remove('d-none');
                     });
             });
+
+            /** Puts changed values back into the table without a page reload. */
+            function rewriteRow(id, officer) {
+                var button = document.querySelector('[data-edit="' + id + '"]');
+                if (!button || !officer) return;
+
+                var tr = button.closest('tr');
+                tr.querySelector('.people__name').textContent = officer.fullName;
+                tr.querySelector('.people__meta').textContent = officer.email;
+                tr.querySelector('.people__avatar').textContent = initialsOf(officer.fullName);
+                tr.cells[2].textContent = officer.branchName;
+                tr.cells[3].textContent = officer.companyName;
+
+                // DataTables caches cell contents; invalidate so search and
+                // sorting see the new values.
+                table.row(tr).invalidate().draw(false);
+            }
+
+            function initialsOf(name) {
+                return name.split(/\s+/)
+                    .filter(function (part) { return part.length > 0; })
+                    .slice(0, 2)
+                    .map(function (part) { return part[0].toUpperCase(); })
+                    .join('');
+            }
 
             /* ── Delete ─────────────────────────────────────────────── */
             document.querySelectorAll('[data-delete]').forEach(function (button) {
@@ -448,19 +477,25 @@
 
                         post('Delete', { id: button.dataset.delete })
                             .then(function (payload) {
-                                sessionStorage.setItem('officerToast', payload.message);
-                                window.location.reload();
+                                table.row(button.closest('tr')).remove().draw(false);
+                                updateCount(-1);
+                                notify.success(payload.message);
                             })
-                            .catch(function (e) { notify.error(e.message); });
+                            .catch(function (e) { notify.failure(e.message); });
                     });
                 });
             });
 
-            /* ── Toast surviving the reload ─────────────────────────── */
-            var pending = sessionStorage.getItem('officerToast');
-            if (pending) {
-                sessionStorage.removeItem('officerToast');
-                notify.toast(pending);
+            /** Keeps the header count in step after a row leaves the table. */
+            function updateCount(delta) {
+                var sub = document.querySelector('.page-head__sub');
+                if (!sub) return;
+
+                var current = parseInt(sub.textContent, 10);
+                if (isNaN(current)) return;
+
+                var next = current + delta;
+                sub.textContent = next + ' registered across all stations';
             }
 
             /* ── Add-officer stepper ────────────────────────────────── */

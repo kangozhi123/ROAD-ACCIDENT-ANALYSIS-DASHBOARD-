@@ -163,7 +163,12 @@
 
 @if (TempData["Toast"] is string toast)
 {
-    <script>notify.toast(@Html.Raw(Json.Serialize(toast)));</script>
+    <script>notify.success(@Html.Raw(Json.Serialize(toast)));</script>
+}
+
+@if (TempData["ToastError"] is string toastError)
+{
+    <script>notify.failure(@Html.Raw(Json.Serialize(toastError)));</script>
 }
 
 <script>

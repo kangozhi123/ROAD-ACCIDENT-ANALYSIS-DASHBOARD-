@@ -75,7 +75,13 @@ public class UsersModel(AppDbContext db, AuthService auth, OfficerService office
 
         return result switch
         {
-            OfficerUpdateResult.Success => new JsonResult(new { message = $"{fullName.Trim()} updated." }),
+            // The changed officer comes back so the table row can be rewritten
+            // in place rather than reloading the whole page.
+            OfficerUpdateResult.Success => new JsonResult(new
+            {
+                message = $"{fullName.Trim()} updated.",
+                officer = await officers.GetAsync(id)
+            }),
             OfficerUpdateResult.NotFound => NotFound(new { error = "That officer no longer exists." }),
             // PageModel has no Conflict() helper, so the 409 is set explicitly.
             OfficerUpdateResult.DuplicateEmail => new JsonResult(
@@ -115,24 +121,31 @@ public class UsersModel(AppDbContext db, AuthService auth, OfficerService office
         switch (result)
         {
             case RegistrationResult.DuplicateForceNumber:
-                ErrorMessage = "An officer is already registered with that force number.";
-                ReopenDialog = true;
-                return Page();
+                return Rejected("An officer is already registered with that force number.");
 
             case RegistrationResult.DuplicateEmail:
-                ErrorMessage = "An officer is already registered with that email address.";
-                ReopenDialog = true;
-                return Page();
+                return Rejected("An officer is already registered with that email address.");
 
             case RegistrationResult.UnknownBranch:
-                ErrorMessage = "That station was not recognised. Choose one from the list.";
-                ReopenDialog = true;
-                return Page();
+                return Rejected("That station was not recognised. Choose one from the list.");
 
             default:
                 TempData["Toast"] = $"{Input.FullName.Trim()} added.";
                 return RedirectToPage();
         }
+    }
+
+    /// <summary>
+    /// Reports a rejected submission twice over: inside the dialog, where the
+    /// user is looking, and as a toast, which is visible even if the dialog is
+    /// scrolled past its alert.
+    /// </summary>
+    private PageResult Rejected(string message)
+    {
+        ErrorMessage = message;
+        ReopenDialog = true;
+        TempData["ToastError"] = message;
+        return Page();
     }
 
     private async Task LoadAsync()
