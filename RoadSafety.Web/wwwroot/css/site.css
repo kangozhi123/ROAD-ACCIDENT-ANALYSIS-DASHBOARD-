@@ -56,6 +56,17 @@ body {
     border-radius: 4px;
 }
 
+/* An inline SVG with no width fills its container. Every icon below sets
+   its own size; this is the floor so a missed one degrades quietly. */
+svg {
+    max-width: 100%;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
 /* ==========================================================================
    Auth screens (sign in / register)
    ========================================================================== */
@@ -760,5 +771,188 @@ body {
         border-radius: 18px;
         padding: .9rem 1rem;
         flex-wrap: wrap;
+    }
+}
+
+/* ==========================================================================
+   Empty states, message pages and secondary buttons
+   ========================================================================== */
+
+.empty-state {
+    border: 1px dashed var(--line);
+    border-radius: 14px;
+    padding: 2.5rem 1.75rem;
+    text-align: center;
+    background: var(--field);
+}
+
+.empty-state svg {
+    width: 44px;
+    height: 44px;
+    display: block;
+    margin: 0 auto .9rem;
+    color: var(--slate);
+    flex: none;
+}
+
+.empty-state h3 {
+    font-size: 1.02rem;
+    font-weight: 700;
+    margin: 0 0 .4rem;
+}
+
+.empty-state p {
+    color: var(--slate);
+    font-size: .87rem;
+    line-height: 1.6;
+    margin: 0 auto;
+    max-width: 46ch;
+}
+
+.btn-ghost-brand {
+    appearance: none;
+    padding: .55rem 1.3rem;
+    border-radius: 999px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--slate);
+    font: inherit;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color .18s ease, color .18s ease;
+}
+
+.btn-ghost-brand:hover {
+    border-color: var(--azure);
+    color: var(--azure);
+}
+
+.message-page {
+    max-width: 34rem;
+    margin: 3rem auto;
+    text-align: center;
+}
+
+.message-page__code {
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--azure);
+    margin-bottom: .6rem;
+}
+
+.message-page h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    margin: 0 0 .6rem;
+}
+
+.message-page p {
+    color: var(--slate);
+    font-size: .93rem;
+    line-height: 1.6;
+    margin: 0 0 1.75rem;
+}
+
+.message-page code {
+    display: inline-block;
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: .15rem .45rem;
+    font-size: .82rem;
+}
+
+/* ==========================================================================
+   Filling the screen — width and breakpoints
+   ========================================================================== */
+
+.shell {
+    max-width: 1760px;
+    gap: 1.5rem;
+    padding: 1.5rem;
+}
+
+/* Analysis gets the wider column; the roster only needs a list width. */
+.card-grid {
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+}
+
+/* Very wide: widen the rail and let four stat cards breathe. */
+@media (min-width: 1600px) {
+    .shell {
+        grid-template-columns: 280px 1fr;
+        gap: 2rem;
+        padding: 2rem;
+    }
+
+    .stat-row {
+        gap: 1.35rem;
+    }
+
+    .stat__value {
+        font-size: 1.7rem;
+    }
+}
+
+/* Laptop: stat cards drop to two across before they crowd. */
+@media (max-width: 1280px) {
+    .shell {
+        grid-template-columns: 220px 1fr;
+    }
+
+    .stat-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .card-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* Tablet: sidebar becomes a horizontal strip above the content. */
+@media (max-width: 940px) {
+    .sidebar__logo {
+        padding-bottom: 1.25rem;
+    }
+
+    .topbar__greeting {
+        white-space: normal;
+    }
+
+    .topbar__right {
+        margin-left: auto;
+    }
+}
+
+/* Phone: one column throughout, identity text drops off the bar. */
+@media (max-width: 620px) {
+    .shell {
+        padding: .75rem;
+    }
+
+    .stat-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: .8rem;
+    }
+
+    .avatar__meta {
+        display: none;
+    }
+
+    .card {
+        padding: 1.15rem 1.15rem 1.25rem;
+    }
+
+    .empty-state {
+        padding: 2rem 1rem;
+    }
+
+    .people__when {
+        display: none;
     }
 }
