@@ -961,3 +961,218 @@ html.nav-collapsed .nav-item.is-active {
         animation: none !important;
     }
 }
+
+/* ==========================================================================
+   Third-party component skins
+   Bootstrap, DataTables, Select2 and bs-stepper pulled onto the brand
+   palette. Everything here is a new selector or a deliberate override of a
+   vendor default — nothing above is restyled.
+   ========================================================================== */
+
+/* Breadcrumb ------------------------------------------------------------ */
+
+.crumbs ol {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .45rem;
+    margin: 0 0 1rem;
+    padding: 0;
+    font-size: .8rem;
+}
+
+.crumbs li + li::before {
+    content: "/";
+    color: var(--line);
+    margin-right: .45rem;
+}
+
+.crumbs a {
+    color: var(--slate);
+    text-decoration: none;
+}
+
+.crumbs a:hover {
+    color: var(--azure);
+    text-decoration: underline;
+}
+
+.crumbs [aria-current="page"] {
+    color: var(--ink);
+    font-weight: 600;
+}
+
+/* Bootstrap modal ------------------------------------------------------- */
+
+.modal-content {
+    border: 0;
+    border-radius: 18px;
+    box-shadow: var(--shadow-card);
+}
+
+.modal-header,
+.modal-footer {
+    border-color: var(--line);
+    padding: 1.1rem 1.4rem;
+}
+
+.modal-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -.01em;
+}
+
+.modal-body {
+    padding: 1.4rem;
+}
+
+.modal-backdrop.show {
+    opacity: .45;
+}
+
+/* DataTables ------------------------------------------------------------ */
+
+table.dataTable {
+    border-collapse: separate !important;
+    border-spacing: 0;
+    font-size: .87rem;
+}
+
+table.dataTable thead th {
+    background: var(--field);
+    border-bottom: 1px solid var(--line) !important;
+    color: var(--slate);
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    padding: .8rem .9rem;
+}
+
+table.dataTable tbody td {
+    border-bottom: 1px solid var(--line);
+    padding: .75rem .9rem;
+    vertical-align: middle;
+}
+
+table.dataTable tbody tr:hover td {
+    background: var(--field);
+}
+
+.dt-container .dt-search input,
+.dt-container .dt-length select {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-field);
+    background: var(--field);
+    padding: .45rem .7rem;
+    font-size: .85rem;
+}
+
+.dt-container .dt-search input:focus,
+.dt-container .dt-length select:focus {
+    outline: none;
+    border-color: var(--azure);
+    box-shadow: 0 0 0 4px rgba(36, 120, 232, .14);
+}
+
+.dt-container .dt-info,
+.dt-container .dt-length label {
+    color: var(--slate);
+    font-size: .8rem;
+}
+
+.dt-container .pagination .page-link {
+    border: 0;
+    color: var(--slate);
+    font-size: .82rem;
+    border-radius: 8px;
+    margin: 0 2px;
+}
+
+.dt-container .pagination .active > .page-link {
+    background: var(--azure);
+    color: #fff;
+}
+
+/* Select2 --------------------------------------------------------------- */
+
+.select2-container--bootstrap-5 .select2-selection {
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-field);
+    min-height: 44px;
+    padding: .35rem .55rem;
+}
+
+.select2-container--bootstrap-5.select2-container--focus .select2-selection,
+.select2-container--bootstrap-5.select2-container--open .select2-selection {
+    border-color: var(--azure);
+    box-shadow: 0 0 0 4px rgba(36, 120, 232, .14);
+}
+
+.select2-container--bootstrap-5 .select2-dropdown {
+    border-color: var(--line);
+    border-radius: var(--radius-field);
+    box-shadow: var(--shadow-soft);
+}
+
+.select2-container--bootstrap-5 .select2-results__option--highlighted {
+    background: var(--azure) !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
+    background: var(--azure);
+    border: 0;
+    border-radius: 6px;
+    color: #fff;
+    font-size: .8rem;
+}
+
+/* bs-stepper ------------------------------------------------------------ */
+
+.bs-stepper .step-trigger {
+    font-family: inherit;
+    font-size: .84rem;
+    font-weight: 600;
+    color: var(--slate);
+    padding: .8rem;
+}
+
+.bs-stepper .step-trigger:hover {
+    background: transparent;
+    color: var(--azure);
+}
+
+.bs-stepper .bs-stepper-circle {
+    background: var(--line);
+    color: var(--slate);
+    width: 2rem;
+    height: 2rem;
+    font-size: .82rem;
+    font-weight: 700;
+}
+
+.bs-stepper .active .bs-stepper-circle {
+    background: var(--azure);
+    color: #fff;
+}
+
+.bs-stepper .active .bs-stepper-label {
+    color: var(--ink);
+}
+
+.bs-stepper .line,
+.bs-stepper-line {
+    background-color: var(--line);
+}
+
+/* Chart canvases size from their wrapper, never from intrinsic size. */
+.chart-box {
+    position: relative;
+    height: 300px;
+}
+
+.chart-box canvas {
+    max-width: 100%;
+}

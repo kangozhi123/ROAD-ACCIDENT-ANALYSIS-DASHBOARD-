@@ -12,6 +12,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Road Accident Analysis</title>
+
+    @* Bootstrap first, page libraries second, brand last — so site.css wins
+       wherever they overlap. *@
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    @await RenderSectionAsync("Styles", required: false)
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <script>
         // Applied before first paint so a collapsed sidebar never flashes open.
@@ -117,6 +122,7 @@
     </main>
 </div>
 
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="~/lib/sweetalert2/sweetalert2.all.min.js"></script>
 <script src="~/js/notify.js" asp-append-version="true"></script>
 
