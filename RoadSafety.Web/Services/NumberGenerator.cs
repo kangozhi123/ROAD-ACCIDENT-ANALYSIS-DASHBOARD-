@@ -13,7 +13,15 @@ public class NumberGenerator(AppDbContext db)
     private const int ForceWidth = 5;
     private const int ReferenceWidth = 3;
 
-    /// <summary>Next officer force number, e.g. ZP-00007.</summary>
+    public async Task<string> NextForceNumberForAsync(
+        string? fullName, CancellationToken ct = default)
+    {
+        var prefix = ReferenceNumber.InitialsFrom(fullName, ForcePrefix);
+
+        return await NextForceNumberAsync(prefix, ct);
+    }
+
+    /// <summary>Next force number under a given prefix, e.g. GB-00007.</summary>
     public async Task<string> NextForceNumberAsync(
         string prefix = ForcePrefix, CancellationToken ct = default)
     {

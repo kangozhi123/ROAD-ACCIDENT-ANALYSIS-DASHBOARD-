@@ -17,9 +17,6 @@ public class UsersModel(AppDbContext db, AuthService auth, OfficerService office
     public List<CompanyOption> Companies { get; private set; } = [];
     public string BranchesJson { get; private set; } = "[]";
 
-    /// <summary>Offered in the add form so nobody has to invent a force number.</summary>
-    public string NextForceNumber { get; private set; } = string.Empty;
-
     [BindProperty]
     public RegisterViewModel Input { get; set; } = new();
 
@@ -34,14 +31,20 @@ public class UsersModel(AppDbContext db, AuthService auth, OfficerService office
     private int CurrentUserId =>
         int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
 
-    public async Task OnGetAsync()
-    {
-        await LoadAsync();
+    public async Task OnGetAsync() => await LoadAsync();
 
-        // Set on the model rather than as a value attribute in the view: the
-        // asp-for tag helper writes value itself from the model and would
-        // overwrite anything the markup put there.
-        Input.ForceNumber = NextForceNumber;
+    /// <summary>
+    /// GET /Users?handler=NextForceNumber&amp;fullName=Grace%20Banda
+    ///
+    /// The prefix comes from the officer's initials, so the number can only be
+    /// worked out once there is a name to read it from. The add form calls this
+    /// as soon as the name field is filled in.
+    /// </summary>
+    public async Task<IActionResult> OnGetNextForceNumberAsync(string? fullName)
+    {
+        var forceNumber = await numbers.NextForceNumberForAsync(fullName);
+
+        return new JsonResult(new { forceNumber });
     }
 
     // ── Endpoints ──────────────────────────────────────────────────────
@@ -135,7 +138,6 @@ public class UsersModel(AppDbContext db, AuthService auth, OfficerService office
     private async Task LoadAsync()
     {
         Officers = await officers.ListAsync();
-        NextForceNumber = await numbers.NextForceNumberAsync();
 
         Companies = await db.Companies
             .OrderBy(c => c.Name)

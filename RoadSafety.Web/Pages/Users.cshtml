@@ -209,9 +209,10 @@
 
                                     <div class="field">
                                         <label asp-for="Input.ForceNumber"></label>
-                                        <input asp-for="Input.ForceNumber" required />
+                                        <input asp-for="Input.ForceNumber" required
+                                               placeholder="Fills in from the name" />
                                         <span class="field-error" asp-validation-for="Input.ForceNumber"></span>
-                                        <span class="field-hint">Next in sequence. Change it if this officer already has one.</span>
+                                        <span class="field-hint">Built from the officer's initials. Change it if they already have a number.</span>
                                     </div>
 
                                     <div class="field">
@@ -488,6 +489,37 @@
                 } else if (prev) {
                     stepper.previous();
                 }
+            });
+
+            /* ── Force number follows the name ──────────────────────── */
+            var nameInput = document.getElementById('Input_FullName');
+            var forceInput = document.getElementById('Input_ForceNumber');
+            var forceEditedByHand = forceInput.value.trim() !== '';
+
+            forceInput.addEventListener('input', function () {
+                // Once somebody types their own number, stop overwriting it.
+                forceEditedByHand = true;
+            });
+
+            var lastNameLookedUp = '';
+
+            nameInput.addEventListener('change', function () {
+                var name = nameInput.value.trim();
+
+                if (forceEditedByHand || name === '' || name === lastNameLookedUp) {
+                    return;
+                }
+
+                lastNameLookedUp = name;
+
+                fetch('/Users?handler=NextForceNumber&fullName=' + encodeURIComponent(name))
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (payload) {
+                        if (payload && !forceEditedByHand) {
+                            forceInput.value = payload.forceNumber;
+                        }
+                    })
+                    .catch(function () { /* leave the field for the user to fill */ });
             });
 
             var addCompany = document.getElementById('modalCompany');

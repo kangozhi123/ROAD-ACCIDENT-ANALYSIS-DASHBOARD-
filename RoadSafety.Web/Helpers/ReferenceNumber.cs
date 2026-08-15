@@ -44,11 +44,36 @@ public static class ReferenceNumber
             && int.TryParse(tail, NumberStyles.None, CultureInfo.InvariantCulture, out sequence);
     }
 
-    /// <summary>
-    /// The next identifier after the highest already in <paramref name="existing"/>.
-    /// Gaps are not reused: if ZP-00004 was deleted, the next is still ZP-00006
-    /// when ZP-00005 exists, so a retired number is never handed to someone new.
-    /// </summary>
+    public static string InitialsFrom(string? fullName, string fallback = "ZP")
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+        {
+            return fallback;
+        }
+
+        var words = fullName.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+
+        var firstLetters = words
+            .Select(word => word.FirstOrDefault(char.IsLetter))
+            .Where(letter => letter != default)
+            .Take(2)
+            .ToArray();
+
+        if (firstLetters.Length >= 2)
+        {
+            return new string(firstLetters).ToUpperInvariant();
+        }
+
+        if (firstLetters.Length == 1)
+        {
+            var letters = new string(words[0].Where(char.IsLetter).ToArray());
+
+            return (letters.Length >= 2 ? letters[..2] : letters).ToUpperInvariant();
+        }
+
+        return fallback;
+    }
+
     public static string Next(IEnumerable<string?> existing, string prefix, int width)
     {
         var highest = 0;

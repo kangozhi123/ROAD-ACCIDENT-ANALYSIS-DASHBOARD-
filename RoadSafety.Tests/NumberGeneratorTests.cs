@@ -47,6 +47,32 @@ public class ReferenceNumberTests
         Assert.False(ReferenceNumber.TryParseSequence(value, "ZP", out _));
     }
 
+    [Theory]
+    [InlineData("Grace Banda", "GB")]
+    [InlineData("grace banda", "GB")]
+    [InlineData("  Grace   Banda  ", "GB")]
+    [InlineData("Grace Mutale Banda", "GM")]      // first two words only
+    [InlineData("Thelma", "TH")]                  // one name uses two letters
+    [InlineData("T", "T")]
+    [InlineData("Mary-Jane Zulu", "MZ")]
+    [InlineData("O'Brien Smith", "OS")]
+    [InlineData("2Pac Shakur", "PS")]             // skips the leading digit
+    public void InitialsFrom_builds_the_prefix_from_the_name(string name, string expected)
+    {
+        Assert.Equal(expected, ReferenceNumber.InitialsFrom(name));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("123 456")]
+    public void InitialsFrom_falls_back_when_the_name_has_no_letters(string? name)
+    {
+        // A force number still has to be issued, so this cannot simply fail.
+        Assert.Equal("ZP", ReferenceNumber.InitialsFrom(name));
+    }
+
     [Fact]
     public void Next_starts_at_one_when_nothing_exists()
     {
@@ -127,19 +153,50 @@ public class NumberGeneratorTests
     }
 
     [Fact]
+    public async Task A_force_number_is_prefixed_with_the_officers_initials()
+    {
+        using var db = CreateContext();
+
+        Assert.Equal("GB-00001", await new NumberGenerator(db).NextForceNumberForAsync("Grace Banda"));
+    }
+
+    [Fact]
+    public async Task Each_set_of_initials_carries_its_own_sequence()
+    {
+        using var db = CreateContext();
+        var numbers = new NumberGenerator(db);
+        var auth = new AuthService(db, new PasswordHasher<User>());
+
+        await auth.RegisterAsync("Grace Banda", "GB-00001", "gb@police.gov.zm", "Password123!", "BR-001");
+
+        // A second GB continues that run; a different name starts its own.
+        Assert.Equal("GB-00002", await numbers.NextForceNumberForAsync("Gift Bwalya"));
+        Assert.Equal("PM-00001", await numbers.NextForceNumberForAsync("Peter Mwale"));
+    }
+
+    [Fact]
+    public async Task An_officer_with_no_usable_name_still_gets_a_number()
+    {
+        using var db = CreateContext();
+
+        Assert.Equal("ZP-00001", await new NumberGenerator(db).NextForceNumberForAsync("   "));
+    }
+
+    [Fact]
     public async Task A_generated_force_number_is_accepted_by_registration()
     {
         using var db = CreateContext();
         var numbers = new NumberGenerator(db);
         var auth = new AuthService(db, new PasswordHasher<User>());
 
-        var generated = await numbers.NextForceNumberAsync();
+        var generated = await numbers.NextForceNumberForAsync("Grace Banda");
         var result = await auth.RegisterAsync(
             "Grace Banda", generated, "g@police.gov.zm", "Password123!", "BR-001");
 
         Assert.Equal(RegistrationResult.Success, result);
+        Assert.Equal("GB-00001", generated);
 
         // And the following call has moved on rather than repeating itself.
-        Assert.NotEqual(generated, await numbers.NextForceNumberAsync());
+        Assert.NotEqual(generated, await numbers.NextForceNumberForAsync("Grace Banda"));
     }
 }
