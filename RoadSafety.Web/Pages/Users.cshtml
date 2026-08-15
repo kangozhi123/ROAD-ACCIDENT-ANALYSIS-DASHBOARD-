@@ -209,8 +209,9 @@
 
                                     <div class="field">
                                         <label asp-for="Input.ForceNumber"></label>
-                                        <input asp-for="Input.ForceNumber" placeholder="ZP-00123" required />
+                                        <input asp-for="Input.ForceNumber" required />
                                         <span class="field-error" asp-validation-for="Input.ForceNumber"></span>
+                                        <span class="field-hint">Next in sequence. Change it if this officer already has one.</span>
                                     </div>
 
                                     <div class="field">

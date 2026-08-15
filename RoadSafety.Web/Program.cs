@@ -16,6 +16,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<OfficerService>();
+builder.Services.AddScoped<NumberGenerator>();
 
 // Lets fetch() send the antiforgery token in a header, so the row actions
 // can post without a full form round-trip.

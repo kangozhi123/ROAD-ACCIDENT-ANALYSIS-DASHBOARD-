@@ -11,11 +11,14 @@ using RoadSafety.Web.ViewModels;
 namespace RoadSafety.Web.Pages;
 
 [Authorize]
-public class UsersModel(AppDbContext db, AuthService auth, OfficerService officers) : PageModel
+public class UsersModel(AppDbContext db, AuthService auth, OfficerService officers, NumberGenerator numbers) : PageModel
 {
     public List<OfficerRow> Officers { get; private set; } = [];
     public List<CompanyOption> Companies { get; private set; } = [];
     public string BranchesJson { get; private set; } = "[]";
+
+    /// <summary>Offered in the add form so nobody has to invent a force number.</summary>
+    public string NextForceNumber { get; private set; } = string.Empty;
 
     [BindProperty]
     public RegisterViewModel Input { get; set; } = new();
@@ -31,7 +34,15 @@ public class UsersModel(AppDbContext db, AuthService auth, OfficerService office
     private int CurrentUserId =>
         int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
 
-    public async Task OnGetAsync() => await LoadAsync();
+    public async Task OnGetAsync()
+    {
+        await LoadAsync();
+
+        // Set on the model rather than as a value attribute in the view: the
+        // asp-for tag helper writes value itself from the model and would
+        // overwrite anything the markup put there.
+        Input.ForceNumber = NextForceNumber;
+    }
 
     // ── Endpoints ──────────────────────────────────────────────────────
 
@@ -124,6 +135,7 @@ public class UsersModel(AppDbContext db, AuthService auth, OfficerService office
     private async Task LoadAsync()
     {
         Officers = await officers.ListAsync();
+        NextForceNumber = await numbers.NextForceNumberAsync();
 
         Companies = await db.Companies
             .OrderBy(c => c.Name)

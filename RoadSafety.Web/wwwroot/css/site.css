@@ -1576,3 +1576,10 @@ table.dataTable tbody tr:hover td {
         margin-bottom: .7rem;
     }
 }
+
+/* Hint under a field — guidance, not an error. */
+.field-hint {
+    font-size: .73rem;
+    color: var(--slate);
+    line-height: 1.45;
+}
